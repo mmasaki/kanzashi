@@ -3,7 +3,14 @@ require 'net/irc'
 require 'yaml'
 
 module Kanzashi
+  DEBUG = true
+
+  def debug_p(str)
+    p str if DEBUG
+  end
+
   module Client
+    include Kanzashi
     @@relay = []
 
     def initialize(server_name)
@@ -14,12 +21,8 @@ module Kanzashi
       @@relay << c
     end
 
-    def send_data(data)
-      p self
-      p data
-    end
-
     def receive_data(data)
+      debug_p data
       @@relay.each do |r|
         r.receive_from_server(data, @server_name)
       end
@@ -27,10 +30,14 @@ module Kanzashi
   
     def send_data(data) # ここでSSL対応をする
       super
+      debug_p self
+      debug_p data
     end
   end
 
   module Server
+    include Kanzashi
+
     def initialize
       Client.add_connection(self)
     end
@@ -44,6 +51,10 @@ module Kanzashi
         connection.send_data("NICK Kanzashi\r\nUSER Kanzashi 8 * :Kanzashi\r\n")
         @@servers[server_name] = connection
       end
+    end
+
+    def debug_p(str)
+      p str if RECEIVE_DEBUG
     end
 
     def receive_data(data)
@@ -105,7 +116,6 @@ module Kanzashi
           @fragment = @fragment.to_s + line
           break
         end
-        p line
         params = line.split
         channel_rewrite(params, server_name)
         send_data("#{params.join(" ")}\r\n")
