@@ -1,3 +1,4 @@
+# encoding: utf-8
 require 'eventmachine'
 require 'net/irc'
 require 'yaml'
@@ -28,23 +29,28 @@ module Kanzashi
     end
 
     def receive_data(data)
-      debug_p data
       data.each_line("\r\n") do |line|
         if @fragment
-          line == @fragment + line
+          line = @fragment + line
           @fragment = nil
         end
         begin
           m = Net::IRC::Message.parse(line)
-        rescue
+        rescue # 断片が送られて来てパースに失敗した時の処理
           @fragment = line
           break
         end
-        line.encode!(Encoding::UTF_8, Encoding::ISO2022_JP, {:invalid => :replace})
-        params = line.split
-        channel_rewrite(params)
-        @@relay.each do |r|
-          r.receive_from_server("#{params.join(" ")}\r\n")
+        case m.command
+        when "PING"
+          send_data "PONG Kanzashi\r\n"
+        else
+          line.encode!(Encoding::UTF_8, Encoding::ISO2022_JP, {:invalid => :replace})
+          debug_p line
+          params = line.split
+          channel_rewrite(params)
+          @@relay.each do |r|
+            r.receive_from_server("#{params.join(" ")}\r\n")
+          end
         end
       end
     end
@@ -52,7 +58,6 @@ module Kanzashi
     def send_data(data) # ここでSSL対応をする
       super
       debug_p self
-      debug_p data
     end
   end
 
@@ -75,7 +80,7 @@ module Kanzashi
     end
 
     def debug_p(str)
-      p str if RECEIVE_DEBUG
+      p str if DEBUG
     end
 
     def receive_data(data)
@@ -89,9 +94,9 @@ module Kanzashi
         case m.command
         when "NICK", "PASS"
         when "USER"
-          send_data("001 #{m[0]} welcome to Kanzashi\r\n")
+          send_data "001 #{m[0]} welcome to Kanzashi\r\n"
         when "QUIT"
-          send_data("ERROR :Closing Link\r\n")
+          send_data "ERROR :Closing Link\r\n"
           close_connection
         else
           send_server(line)
@@ -103,12 +108,12 @@ module Kanzashi
     def send_server(line)
       params = line.split
       channels = nil
-      channel_pos = nil
-      params.each.with_index do |param, i|
-        if param[0] == "#"
-          channel_pos = i
+      channel_pos = params.each.find_index do |param|
+        if param.include?("#")
           channels = param
-          break
+          true
+        else
+          false
         end
       end
       if channels
@@ -117,7 +122,9 @@ module Kanzashi
           channel_name = $1
           server = $2.to_sym
           params[channel_pos].replace(channel_name)
-          @@servers[server].send_data("#{params.join(" ")}\r\n")
+          data = "#{params.join(" ")}\r\n"
+          debug_p data
+          @@servers[server].send_data(data.encode!(Encoding::ISO2022_JP, Encoding::UTF_8, {:invalid => :replace}))
         end
       end
     end
