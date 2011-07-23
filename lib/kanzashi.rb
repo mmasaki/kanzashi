@@ -15,8 +15,9 @@ module Kanzashi
     include Kanzashi
     @@relay = [] # リレー先のコネクションの入った配列
 
-    def initialize(server_name)
+    def initialize(server_name, encoding)
       @server_name = server_name
+      @encoding = Encoding.find(encoding)
     end
 
     # 新しいクライアントからのコネクションを追加
@@ -54,7 +55,7 @@ module Kanzashi
         when "PING"
           send_data "PONG Kanzashi\r\n"
         else
-          line.encode!(Encoding::UTF_8, Encoding::ISO2022_JP, {:invalid => :replace})
+          line.encode!(Encoding::UTF_8, @encoding, {:invalid => :replace})
           debug_p line
           params = line.split
           channel_rewrite(params)
@@ -68,7 +69,7 @@ module Kanzashi
     def send_data(data)
       debug_p self
       debug_p data
-      data.encode!(Encoding::ISO2022_JP, Encoding::UTF_8, {:invalid => :replace})
+      data.encode!(@encoding, Encoding::UTF_8, {:invalid => :replace})
       super
     end
   end
@@ -85,7 +86,7 @@ module Kanzashi
       @@servers = {}
       # サーバとコネクションを張る
       @@config[:servers].each do |server_name, value|
-        connection = EventMachine::connect(value[0], value[1], Client, server_name)
+        connection = EventMachine::connect(value[0], value[1], Client, server_name, value[2])
         @@servers[server_name] = connection
         connection.send_data("NICK #{@@config[:nick]}\r\nUSER #{@@config[:nick]} 8 * :#{@@config[:realname]}\r\n")
       end
