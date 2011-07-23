@@ -6,13 +6,14 @@ require 'yaml'
 module Kanzashi
   DEBUG = true
 
+  # デバッグ用の出力
   def debug_p(str)
     p str if DEBUG
   end
 
   module Client # IRCクライアントとしてサーバとの通信をするモジュール
     include Kanzashi
-    @@relay = []
+    @@relay = [] # リレー先のコネクションの入った配列
 
     def initialize(server_name)
       @server_name = server_name
@@ -84,8 +85,8 @@ module Kanzashi
       # サーバとコネクションを張る
       @@config[:servers].each do |server_name, value|
         connection = EventMachine::connect(value[0], value[1], Client, server_name)
-        connection.send_data("NICK Kanzashi\r\nUSER Kanzashi 8 * :Kanzashi\r\n")
         @@servers[server_name] = connection
+        connection.send_data("NICK #{@@config[:nick]}\r\nUSER #{@@config[:nick]} 8 * :#{@@config[:realname]}\r\n")
       end
     end
 
@@ -124,10 +125,10 @@ module Kanzashi
       end
       if channels
         channels.split(",").each do |channel|
-          if /(.+)@(.+)/ =~ channel # [チャンネル名]@[サーバ名]の書式に合致した場合
-            channel_name = $1
-            server = @@servers[$2.to_sym]
-          else # 合致しなかった場合
+          /(.+)@(.+)/ =~ channel
+          channel_name = $1
+          server = @@servers[$2.to_sym]
+          unless server # サーバのコネクションの取得に失敗した場合
             channel_name = channel
             server = @@servers.first[1] # サーバリストの最初にあるサーバのコネクション
           end
