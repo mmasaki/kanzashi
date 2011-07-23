@@ -13,20 +13,22 @@ module Kanzashi
 
   module Client # IRCクライアントとしてサーバとの通信をするモジュール
     include Kanzashi
-    @@relay = [] # リレー先のコネクションの入った配列
+    @@relay_to = [] # リレー先のコネクションの入った配列
 
     def initialize(server_name, encoding)
       @server_name = server_name
       @encoding = Encoding.find(encoding)
+      @joined_channels = {}
     end
 
     # 新しいクライアントからのコネクションを追加
     def self.add_connection(c)
-      @@relay << c
+      @@relay_to << c
     end
 
     # サーバからのレスポンスにチャンネル名が含まれていたら、サーバ名を付加して書き換える
-    def channel_rewrite(params)
+    def channel_rewrite(line)
+      params = line.split
       params.each do |param|
         if /#|%|!/ =~ param
           channels = []
@@ -36,6 +38,7 @@ module Kanzashi
           param.replace(channels.join(","))
         end
       end
+      params.join(" ")
     end
   
     # サーバから受信したデータの処理
@@ -51,18 +54,40 @@ module Kanzashi
           @fragment = line
           break
         end
+        line.encode!(Encoding::UTF_8, @encoding, {:invalid => :replace})
         case m.command
         when "PING"
           send_data "PONG Kanzashi\r\n"
-        else
-          line.encode!(Encoding::UTF_8, @encoding, {:invalid => :replace})
-          debug_p line
-          params = line.split
-          channel_rewrite(params)
-          @@relay.each do |r|
-            r.receive_from_server("#{params.join(" ")}\r\n")
+        when "JOIN"
+          channel_sym = m[0].to_s.to_sym
+          unless @joined_channels.keys.include?(channel_sym)
+            @joined_channels[m[0].to_s.to_sym] = []
+            relay("JOIN #{m[0]}@#{@server_name}\r\n")
           end
+        when "332", "333", "366"
+          @joined_channels[m[1].to_s.to_sym] << channel_rewrite(line)
+        when "353"  
+          @joined_channels[m[2].to_s.to_sym] << channel_rewrite(line)
+        else
+          debug_p line
+          relay("#{channel_rewrite(line)}\r\n")
         end
+      end
+    end
+
+    def relay(data)
+      @@relay_to.each { |r| r.receive_from_server(data) }
+    end
+
+    def join(channel_name)
+      channel_sym = channel_name.to_sym
+      if @joined_channels.keys.include?(channel_sym)
+        relay(":Kanzashi JOIN :#{channel_name}@#{@server_name}\r\n")
+        @joined_channels[channel_sym].each do |line|
+          relay("#{line}\r\n")
+        end
+      else
+        send_data("JOIN #{channel_name}\r\n")
       end
     end
   
@@ -104,6 +129,11 @@ module Kanzashi
         when "NICK"
         when "USER"
           send_data "001 #{m[0]} welcome to Kanzashi.\r\n"
+        when "JOIN"
+          m[0].split(",").each do |channel|
+            channel_name, server = split_channel_and_server(channel)
+            server.join(channel_name)
+          end
         when "QUIT"
           send_data "ERROR :Closing Link.\r\n"
           close_connection
@@ -111,6 +141,18 @@ module Kanzashi
           send_server(line)
         end
       end
+    end
+
+    def split_channel_and_server(channel)
+      if /(.+)@(.+)/ =~ channel
+        channel_name = $1
+        server = @@servers[$2.to_sym]
+      end
+      unless server # サーバのコネクションの取得に失敗した場合
+        channel_name = channel
+        server = @@servers.first[1] # サーバリストの最初にあるサーバのコネクション
+      end
+      [channel_name, server]
     end
 
     # 適切なサーバに送信
@@ -127,14 +169,7 @@ module Kanzashi
       end
       if channels
         channels.split(",").each do |channel|
-          if /(.+)@(.+)/ =~ channel
-            channel_name = $1
-            server = @@servers[$2.to_sym]
-          end
-          unless server # サーバのコネクションの取得に失敗した場合
-            channel_name = channel
-            server = @@servers.first[1] # サーバリストの最初にあるサーバのコネクション
-          end
+          channel_name, server = split_channel_and_server(channel)
           params[channel_pos].replace(channel_name)
           server.send_data("#{params.join(" ")}\r\n")
         end
