@@ -18,7 +18,7 @@ module Kanzashi
     def initialize(server_name, encoding)
       @server_name = server_name
       @encoding = Encoding.find(encoding)
-      @joined_channels = {}
+      @channels = {}
     end
 
     # 新しいクライアントからのコネクションを追加
@@ -60,14 +60,16 @@ module Kanzashi
           send_data "PONG Kanzashi\r\n"
         when "JOIN"
           channel_sym = m[0].to_s.to_sym
-          unless @joined_channels.keys.include?(channel_sym)
-            @joined_channels[m[0].to_s.to_sym] = []
-            relay("JOIN #{m[0]}@#{@server_name}\r\n")
-          end
+          @channels[channel_sym] = [] unless @channels.keys.include?(channel_sym)
+          relay("#{channel_rewrite(line)}\r\n")
         when "332", "333", "366"
-          @joined_channels[m[1].to_s.to_sym] << channel_rewrite(line)
-        when "353"  
-          @joined_channels[m[2].to_s.to_sym] << channel_rewrite(line)
+          channel_sym = m[1].to_s.to_sym
+          @channels[channel_sym] << channel_rewrite(line) unless @channels.keys.include?(channel_sym)
+          relay("#{channel_rewrite(line)}\r\n")
+        when "353"
+          channel_sym = m[2].to_s.to_sym
+          @channels[channel_sym] << channel_rewrite(line) unless @channels.keys.include?(channel_sym)
+          relay("#{channel_rewrite(line)}\r\n")
         else
           debug_p line
           relay("#{channel_rewrite(line)}\r\n")
@@ -81,9 +83,9 @@ module Kanzashi
 
     def join(channel_name)
       channel_sym = channel_name.to_sym
-      if @joined_channels.keys.include?(channel_sym)
+      if @channels.keys.include?(channel_sym)
         relay(":Kanzashi JOIN :#{channel_name}@#{@server_name}\r\n")
-        @joined_channels[channel_sym].each do |line|
+        @channels[channel_sym].each do |line|
           relay("#{line}\r\n")
         end
       else
