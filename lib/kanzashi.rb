@@ -27,7 +27,7 @@ module Kanzashi
     # サーバからのレスポンスにチャンネル名が含まれていたら、サーバ名を付加して書き換える
     def channel_rewrite(params)
       params.each do |param|
-        if param.include?("#")
+        if /#|%|!/ =~ param
           channels = []
           param.split(",").each do |channel|
             channels << "#{channel}@#{@server_name}"
@@ -102,9 +102,9 @@ module Kanzashi
         case m.command
         when "NICK"
         when "USER"
-          send_data "001 #{m[0]} welcome to Kanzashi\r\n"
+          send_data "001 #{m[0]} welcome to Kanzashi.\r\n"
         when "QUIT"
-          send_data "ERROR :Closing Link\r\n"
+          send_data "ERROR :Closing Link.\r\n"
           close_connection
         else
           send_server(line)
@@ -117,7 +117,7 @@ module Kanzashi
       params = line.split
       channels = nil
       channel_pos = params.each.find_index do |param|
-        if param.include?("#")
+        if /#|%|!/ =~ param
           channels = param
           true
         else
