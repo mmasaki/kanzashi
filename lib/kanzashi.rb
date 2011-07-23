@@ -28,10 +28,11 @@ module Kanzashi
     def channel_rewrite(params)
       params.each do |param|
         if param.include?("#")
-          channels = ""
+          channels = []
           param.split(",").each do |channel|
             channels << "#{channel}@#{@server_name}"
           end
+          param.replace(channels.join(","))
         end
       end
     end
@@ -125,9 +126,10 @@ module Kanzashi
       end
       if channels
         channels.split(",").each do |channel|
-          /(.+)@(.+)/ =~ channel
-          channel_name = $1
-          server = @@servers[$2.to_sym]
+          if /(.+)@(.+)/ =~ channel
+            channel_name = $1
+            server = @@servers[$2.to_sym]
+          end
           unless server # サーバのコネクションの取得に失敗した場合
             channel_name = channel
             server = @@servers.first[1] # サーバリストの最初にあるサーバのコネクション
