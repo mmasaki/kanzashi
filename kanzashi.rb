@@ -1,4 +1,4 @@
-require './lib/kanzashi'
+require_relative './lib/kanzashi'
 
 EventMachine::run do
   Kanzashi::Server.start_and_connect("config.yml")
