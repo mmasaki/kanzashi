@@ -21,10 +21,31 @@ module Kanzashi
       @@relay << c
     end
 
+    def channel_rewrite(params)
+      params.each do |param|
+        param.concat("@#{@server_name}") if param.include?("#")
+      end
+    end
+
     def receive_data(data)
       debug_p data
-      @@relay.each do |r|
-        r.receive_from_server(data, @server_name)
+      data.each_line("\r\n") do |line|
+        if @fragment
+          line == @fragment + line
+          @fragment = nil
+        end
+        begin
+          m = Net::IRC::Message.parse(line)
+        rescue
+          @fragment = line
+          break
+        end
+        line.encode!(Encoding::UTF_8, Encoding::ISO2022_JP, {:invalid => :replace})
+        params = line.split
+        channel_rewrite(params)
+        @@relay.each do |r|
+          r.receive_from_server("#{params.join(" ")}\r\n")
+        end
       end
     end
   
@@ -58,9 +79,12 @@ module Kanzashi
     end
 
     def receive_data(data)
-      data.each_line do |line|
+      data.each_line("\r\n") do |line|
         m = Net::IRC::Message.parse(line)
-        @auth = @@config[:pass] == m[0] if  m.command ==  "PASS"
+        if  m.command ==  "PASS"
+          @auth = @@config[:pass] == m[0]
+          next
+        end
         close_connection unless @auth
         case m.command
         when "NICK", "PASS"
@@ -98,28 +122,8 @@ module Kanzashi
       end
     end
 
-    def channel_rewrite(params, server_name)
-      params.each do |param|
-        param.concat("@#{server_name}") if param[0] == "#"
-      end
-    end
-
-    def receive_from_server(data, server_name)
-      data.each_line("\r\n") do |line|
-        if @fragment
-          line == @fragment + line
-          @fragment = nil
-        end
-        begin
-          m = Net::IRC::Message.parse(@fragment.to_s + line)
-        rescue
-          @fragment = @fragment.to_s + line
-          break
-        end
-        params = line.split
-        channel_rewrite(params, server_name)
-        send_data("#{params.join(" ")}\r\n")
-      end 
+    def receive_from_server(data)
+      send_data(data)
     end
   end
 end
