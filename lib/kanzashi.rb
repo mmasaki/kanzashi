@@ -10,7 +10,7 @@ module Kanzashi
     p str if DEBUG
   end
 
-  module Client
+  module Client # IRCクライアントとしてサーバとの通信をするモジュール
     include Kanzashi
     @@relay = []
 
@@ -18,16 +18,24 @@ module Kanzashi
       @server_name = server_name
     end
 
+    # 新しいクライアントからのコネクションを追加
     def self.add_connection(c)
       @@relay << c
     end
 
+    # サーバからのレスポンスにチャンネル名が含まれていたら、サーバ名を付加して書き換える
     def channel_rewrite(params)
       params.each do |param|
-        param.concat("@#{@server_name}") if param.include?("#")
+        if param.include?("#")
+          channels = ""
+          param.split(",").each do |channel|
+            channels << "#{channel}@#{@server_name}"
+          end
+        end
       end
     end
-
+  
+    # サーバから受信したデータの処理
     def receive_data(data)
       data.each_line("\r\n") do |line|
         if @fragment
@@ -55,13 +63,15 @@ module Kanzashi
       end
     end
   
-    def send_data(data) # ここでSSL対応をする
-      super
+    def send_data(data)
       debug_p self
+      debug_p data
+      data.encode!(Encoding::ISO2022_JP, Encoding::UTF_8, {:invalid => :replace})
+      super
     end
   end
 
-  module Server
+  module Server # IRCクライアントに対してサーバとして振舞うモジュール
     include Kanzashi
 
     def initialize
@@ -79,10 +89,6 @@ module Kanzashi
       end
     end
 
-    def debug_p(str)
-      p str if DEBUG
-    end
-
     def receive_data(data)
       data.each_line("\r\n") do |line|
         m = Net::IRC::Message.parse(line)
@@ -92,7 +98,7 @@ module Kanzashi
         end
         close_connection unless @auth
         case m.command
-        when "NICK", "PASS"
+        when "NICK"
         when "USER"
           send_data "001 #{m[0]} welcome to Kanzashi\r\n"
         when "QUIT"
@@ -118,13 +124,15 @@ module Kanzashi
       end
       if channels
         channels.split(",").each do |channel|
-          /(.+)@(.+)/ =~ channel
-          channel_name = $1
-          server = $2.to_sym
+          if /(.+)@(.+)/ =~ channel # [チャンネル名]@[サーバ名]の書式に合致した場合
+            channel_name = $1
+            server = @@servers[$2.to_sym]
+          else # 合致しなかった場合
+            channel_name = channel
+            server = @@servers.first[1] # サーバリストの最初にあるサーバのコネクション
+          end
           params[channel_pos].replace(channel_name)
-          data = "#{params.join(" ")}\r\n"
-          debug_p data
-          @@servers[server].send_data(data.encode!(Encoding::ISO2022_JP, Encoding::UTF_8, {:invalid => :replace}))
+          server.send_data("#{params.join(" ")}\r\n")
         end
       end
     end
