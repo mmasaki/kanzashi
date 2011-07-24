@@ -1,10 +1,12 @@
 # Kanzashi - IRC Proxy software written in Ruby
 
-![logo by akazora flanc](http://akazora.cosmio.net/data/4e9ff3dbcd50a5ab8c7adab125c17eb7.png)
+![logo by akazora flanc](http://akazora.cosmio.net/data/c3f9839a10d27ead03f542617be34648.png)
 
 ## What's this?
 
 This is an IRC proxy written in Ruby.
+
+Please note this is still in development.
 
 ## Install
 
