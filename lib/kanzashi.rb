@@ -2,6 +2,7 @@
 require 'eventmachine'
 require 'net/irc'
 require 'yaml'
+require 'digest/sha2'
 
 module Kanzashi
   DEBUG = true
@@ -82,12 +83,11 @@ module Kanzashi
     end
 
     def join(channel_name)
-      p @channels
       channel_sym = channel_name.to_sym
       if @channels.keys.include?(channel_sym)
-        relay(":Kanzashi JOIN :#{channel_name}@#{@server_name}\r\n")
+        relay(":#{@@config[:nick]} JOIN :#{channel_name}@#{@server_name}\r\n")
         @channels[channel_sym].each do |line|
-          relay("#{line}\r\n")
+          relay(line)
         end
       else
         send_data("JOIN #{channel_name}\r\n")
@@ -128,7 +128,7 @@ module Kanzashi
       data.each_line("\r\n") do |line|
         m = Net::IRC::Message.parse(line)
         if  m.command ==  "PASS"
-          @auth = @@config[:pass] == m[0]
+          @auth = @@config[:pass] == Digest::SHA256.hexdigest(m[0].to_s)
           next
         end
         close_connection unless @auth
