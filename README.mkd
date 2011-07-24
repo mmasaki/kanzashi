@@ -1,6 +1,6 @@
 # Kanzashi - IRC Proxy software written in Ruby
 
-![logo by akazora flanc](http://akazora.cosmio.net/data/c3f9839a10d27ead03f542617be34648.png)
+![logo by akazora flanc](http://akazora.cosmio.net/Kanzashi.png)
 
 ## What's this?
 
