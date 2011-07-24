@@ -5,7 +5,7 @@ require 'yaml'
 require 'digest/sha2'
 
 module Kanzashi
-  DEBUG = true # flag to enable/disable debug print
+  DEBUG = true # a flag to enable/disable debug print
 
   # debug print
   def debug_p(str)
@@ -30,8 +30,8 @@ module Kanzashi
     end
 
     # add new connection from clients
-    def self.add_connection(c)
-      @@relay_to << c
+    def self.add_connection(connection)
+      @@relay_to << connection
     end
 
     # rewrite channel names for Kanzashi clients
@@ -44,6 +44,7 @@ module Kanzashi
             channels << "#{channel}@#{@server_name}"
           end
           param.replace(channels.join(","))
+          break
         end
       end
       params.join(" ").concat("\r\n")

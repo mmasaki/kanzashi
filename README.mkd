@@ -6,7 +6,7 @@
 
 ## What's this?
 
-TBD
+This is an IRC proxy written in Ruby.
 
 ## Install
 
