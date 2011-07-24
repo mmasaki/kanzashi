@@ -12,7 +12,7 @@ module Kanzashi
     p str if DEBUG
   end
 
-  # a module to communicate with IRC server as a client
+  # a module to communicate with IRC servers as a client
   module Client
     include Kanzashi
     @@relay_to = [] # an array includes connections to relay
@@ -29,12 +29,12 @@ module Kanzashi
       start_tls if @use_tls # enable TLS
     end
 
-    # add new connection from client
+    # add new connection from clients
     def self.add_connection(c)
       @@relay_to << c
     end
 
-    # rewrite channel name for Kanzashi client
+    # rewrite channel names for Kanzashi clients
     def channel_rewrite(line)
       params = line.split
       params.each do |param|
