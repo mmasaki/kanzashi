@@ -13,7 +13,7 @@ module Kanzashi
 
   module Client # IRCクライアントとしてサーバとの通信をするモジュール
     include Kanzashi
-    @@relay_to = [] # リレー先のコネクションの入った配列
+    @@relay_to = [] # an array includes connections to relay
 
     def initialize(server_name, encoding)
       @server_name = server_name
@@ -21,7 +21,7 @@ module Kanzashi
       @channels = {}
     end
 
-    # 新しいクライアントからのコネクションを追加
+    # add new connection from client
     def self.add_connection(c)
       @@relay_to << c
     end
@@ -64,11 +64,11 @@ module Kanzashi
           relay(channel_rewrite(line))
         when "332", "333", "366"
           channel_sym = m[1].to_s.to_sym
-          @channels[channel_sym] << channel_rewrite(line) unless @channels.keys.include?(channel_sym)
+          @channels[channel_sym] << channel_rewrite(line) if @channels[channel_sym]
           relay(channel_rewrite(line))
         when "353"
           channel_sym = m[2].to_s.to_sym
-          @channels[channel_sym] << channel_rewrite(line) unless @channels.keys.include?(channel_sym)
+          @channels[channel_sym] << channel_rewrite(line) if @channels[channel_sym]
           relay(channel_rewrite(line))
         else
           debug_p line
@@ -82,6 +82,7 @@ module Kanzashi
     end
 
     def join(channel_name)
+      p @channels
       channel_sym = channel_name.to_sym
       if @channels.keys.include?(channel_sym)
         relay(":Kanzashi JOIN :#{channel_name}@#{@server_name}\r\n")
