@@ -16,11 +16,16 @@ module Kanzashi
     include Kanzashi
     @@relay_to = [] # an array includes connections to relay
 
-    def initialize(server_name, encoding)
+    def initialize(server_name, encoding, use_ssl=false)
       @server_name = server_name
       @encoding = Encoding.find(encoding)
       @channels = {}
       @buffer = BufferedTokenizer.new("\r\n")
+      @use_ssl = use_ssl
+    end
+
+    def post_init
+      start_tls if @use_ssl # enable SSL
     end
 
     # add new connection from client
@@ -116,7 +121,7 @@ module Kanzashi
       @@servers = {}
       # サーバとコネクションを張る
       @@config[:servers].each do |server_name, value|
-        connection = EventMachine::connect(value[0], value[1], Client, server_name, value[2])
+        connection = EventMachine::connect(value[0], value[1], Client, server_name, value[2], value[3])
         @@servers[server_name] = connection
         connection.send_data("NICK #{@@config[:nick]}\r\nUSER #{@@config[:nick]} 8 * :#{@@config[:realname]}\r\n")
       end
