@@ -106,6 +106,9 @@ module Kanzashi
 
     def initialize
       Client.add_connection(self)
+    end
+
+    def post_init
       start_tls(@@config[:ssl_opts] ? @@config[:ssl_opts] : {}) if @@config[:use_ssl] # enable SSL
     end
 
