@@ -5,27 +5,28 @@ require 'yaml'
 require 'digest/sha2'
 
 module Kanzashi
-  DEBUG = true
+  DEBUG = true # flag to enable/disable debug print
 
-  # デバッグ用の出力
+  # debug print
   def debug_p(str)
     p str if DEBUG
   end
 
-  module Client # IRCクライアントとしてサーバとの通信をするモジュール
+  # a module to communicate with IRC server as a client
+  module Client
     include Kanzashi
     @@relay_to = [] # an array includes connections to relay
 
-    def initialize(server_name, encoding, use_ssl=false)
+    def initialize(server_name, encoding, use_tls=false)
       @server_name = server_name
       @encoding = Encoding.find(encoding)
       @channels = {}
       @buffer = BufferedTokenizer.new("\r\n")
-      @use_ssl = use_ssl
+      @use_tls = use_tls
     end
 
     def post_init
-      start_tls if @use_ssl # enable SSL
+      start_tls if @use_tls # enable TLS
     end
 
     # add new connection from client
@@ -33,7 +34,7 @@ module Kanzashi
       @@relay_to << c
     end
 
-    # サーバからのレスポンスにチャンネル名が含まれていたら、サーバ名を付加して書き換える
+    # rewrite channel name for Kanzashi client
     def channel_rewrite(line)
       params = line.split
       params.each do |param|
@@ -72,7 +73,7 @@ module Kanzashi
       end  
     end
   
-    # サーバから受信したデータの処理
+    # process receiveed data
     def receive_data(data)
       @buffer.extract(data).each do |line|
         line.concat("\r\n")
@@ -104,7 +105,8 @@ module Kanzashi
     end
   end
 
-  module Server # IRCクライアントに対してサーバとして振舞うモジュール
+  # a module behaves like an IRC server to IRC clients.
+  module Server
     include Kanzashi
 
     def initialize
@@ -113,13 +115,13 @@ module Kanzashi
     end
 
     def post_init
-      start_tls(@@config[:ssl_opts] ? @@config[:ssl_opts] : {}) if @@config[:use_ssl] # enable SSL
+      start_tls(@@config[:tls_opts] ? @@config[:tls_opts] : {}) if @@config[:use_tls] # enable TLS
     end
 
     def self.start_and_connect(config_filename)
       @@config = YAML.load(File.open(config_filename))
       @@servers = {}
-      # サーバとコネクションを張る
+      # connect to specified server
       @@config[:servers].each do |server_name, value|
         connection = EventMachine::connect(value[0], value[1], Client, server_name, value[2], value[3])
         @@servers[server_name] = connection
@@ -162,14 +164,14 @@ module Kanzashi
         channel_name = $1
         server = @@servers[$2.to_sym]
       end
-      unless server # サーバのコネクションの取得に失敗した場合
+      unless server # in the case where the user specifies invaild server
         channel_name = channel
-        server = @@servers.first[1] # サーバリストの最初にあるサーバのコネクション
+        server = @@servers.first[1] # the first connection of servers list
       end
       [channel_name, server]
     end
 
-    # 適切なサーバに送信
+    # send data to specified server
     def send_server(line)
       params = line.split
       channels = nil
