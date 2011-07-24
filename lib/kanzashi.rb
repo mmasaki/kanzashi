@@ -20,6 +20,7 @@ module Kanzashi
       @server_name = server_name
       @encoding = Encoding.find(encoding)
       @channels = {}
+      @buffer = BufferedTokenizer.new("\r\n")
     end
 
     # add new connection from client
@@ -41,40 +42,36 @@ module Kanzashi
       end
       params.join(" ").concat("\r\n")
     end
+
+    def receive_line(line)
+      m = Net::IRC::Message.parse(line)
+      line.encode!(Encoding::UTF_8, @encoding, {:invalid => :replace})
+      case m.command
+      when "PING"
+        send_data "PONG Kanzashi\r\n"
+      when "JOIN"
+        channel_sym = m[0].to_s.to_sym
+        @channels[channel_sym] = [] unless @channels.keys.include?(channel_sym)
+        relay(channel_rewrite(line))
+      when "332", "333", "366"
+        channel_sym = m[1].to_s.to_sym
+        @channels[channel_sym] << channel_rewrite(line) if @channels[channel_sym]
+        relay(channel_rewrite(line))
+      when "353"
+        channel_sym = m[2].to_s.to_sym
+        @channels[channel_sym] << channel_rewrite(line) if @channels[channel_sym]
+        relay(channel_rewrite(line))
+      else
+        debug_p line
+        relay(channel_rewrite(line))
+      end  
+    end
   
     # サーバから受信したデータの処理
     def receive_data(data)
-      data.each_line("\r\n") do |line|
-        if @fragment
-          line = @fragment + line
-          @fragment = nil
-        end
-        begin
-          m = Net::IRC::Message.parse(line)
-        rescue # 断片が送られて来てパースに失敗した時の処理
-          @fragment = line
-          break
-        end
-        line.encode!(Encoding::UTF_8, @encoding, {:invalid => :replace})
-        case m.command
-        when "PING"
-          send_data "PONG Kanzashi\r\n"
-        when "JOIN"
-          channel_sym = m[0].to_s.to_sym
-          @channels[channel_sym] = [] unless @channels.keys.include?(channel_sym)
-          relay(channel_rewrite(line))
-        when "332", "333", "366"
-          channel_sym = m[1].to_s.to_sym
-          @channels[channel_sym] << channel_rewrite(line) if @channels[channel_sym]
-          relay(channel_rewrite(line))
-        when "353"
-          channel_sym = m[2].to_s.to_sym
-          @channels[channel_sym] << channel_rewrite(line) if @channels[channel_sym]
-          relay(channel_rewrite(line))
-        else
-          debug_p line
-          relay(channel_rewrite(line))
-        end
+      @buffer.extract(data).each do |line|
+        line.concat("\r\n")
+        receive_line(line)
       end
     end
 
@@ -107,6 +104,7 @@ module Kanzashi
 
     def initialize
       Client.add_connection(self)
+      @buffer = BufferedTokenizer.new("\r\n")
     end
 
     def post_init
@@ -124,29 +122,33 @@ module Kanzashi
       end
     end
 
+    def receive_line(line)
+      m = Net::IRC::Message.parse(line)
+      if  m.command ==  "PASS"
+        @auth = @@config[:pass] == Digest::SHA256.hexdigest(m[0].to_s)
+      end
+      close_connection unless @auth
+      case m.command
+      when "NICK", "PONG"
+      when "USER"
+        send_data "001 #{m[0]} welcome to Kanzashi.\r\n"
+      when "JOIN"
+        m[0].split(",").each do |channel|
+          channel_name, server = split_channel_and_server(channel)
+          server.join(channel_name)
+        end
+      when "QUIT"
+        send_data "ERROR :Closing Link.\r\n"
+        close_connection
+      else
+        send_server(line)
+      end
+    end
+
     def receive_data(data)
-      data.each_line("\r\n") do |line|
-        m = Net::IRC::Message.parse(line)
-        if  m.command ==  "PASS"
-          @auth = @@config[:pass] == Digest::SHA256.hexdigest(m[0].to_s)
-          next
-        end
-        close_connection unless @auth
-        case m.command
-        when "NICK"
-        when "USER"
-          send_data "001 #{m[0]} welcome to Kanzashi.\r\n"
-        when "JOIN"
-          m[0].split(",").each do |channel|
-            channel_name, server = split_channel_and_server(channel)
-            server.join(channel_name)
-          end
-        when "QUIT"
-          send_data "ERROR :Closing Link.\r\n"
-          close_connection
-        else
-          send_server(line)
-        end
+      @buffer.extract(data).each do |line|
+        line.concat("\r\n")
+        receive_line(line)
       end
     end
 
