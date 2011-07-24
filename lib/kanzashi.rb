@@ -38,7 +38,7 @@ module Kanzashi
           param.replace(channels.join(","))
         end
       end
-      params.join(" ")
+      params.join(" ").concat("\r\n")
     end
   
     # サーバから受信したデータの処理
@@ -61,18 +61,18 @@ module Kanzashi
         when "JOIN"
           channel_sym = m[0].to_s.to_sym
           @channels[channel_sym] = [] unless @channels.keys.include?(channel_sym)
-          relay("#{channel_rewrite(line)}\r\n")
+          relay(channel_rewrite(line))
         when "332", "333", "366"
           channel_sym = m[1].to_s.to_sym
           @channels[channel_sym] << channel_rewrite(line) unless @channels.keys.include?(channel_sym)
-          relay("#{channel_rewrite(line)}\r\n")
+          relay(channel_rewrite(line))
         when "353"
           channel_sym = m[2].to_s.to_sym
           @channels[channel_sym] << channel_rewrite(line) unless @channels.keys.include?(channel_sym)
-          relay("#{channel_rewrite(line)}\r\n")
+          relay(channel_rewrite(line))
         else
           debug_p line
-          relay("#{channel_rewrite(line)}\r\n")
+          relay(channel_rewrite(line))
         end
       end
     end
@@ -106,6 +106,7 @@ module Kanzashi
 
     def initialize
       Client.add_connection(self)
+      start_tls(@@config[:ssl_opts] ? @@config[:ssl_opts] : {}) if @@config[:use_ssl] # enable SSL
     end
 
     def self.start_and_connect(config_filename)
