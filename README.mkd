@@ -1,0 +1,26 @@
+# Kanzashi - IRC Proxy software written in Ruby
+
+<div style="font-size: 150px; font-family: serif; text-align: center">
+  簪
+</div>
+
+## What's this?
+
+TBD
+
+## Install
+
+TBD
+
+## Configuration
+
+TBD
+
+## Authors
+
+* Glass\_saga
+* sora\_h
+
+## Pasra
+
+this project is supported by [Team Pasra](http://pasra.tk).
