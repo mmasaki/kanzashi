@@ -190,8 +190,8 @@ module Kanzashi
     def self.start_and_connect
       @@servers = {}
       # connect to specified server
-      @@config[:servers].each do |server_name, value|
-        connection = EventMachine::connect(value[:host], value[:port], Client, server_name, value[:encoding], value[:use_tls])
+      @@config[:networks].each do |server_name, value|
+        connection = EventMachine::connect(value[:host], value[:port], Client, server_name, value[:encoding], value[:tls])
         @@servers[server_name] = connection
         connection.send_data("NICK #{@@config[:user][:nick]}\r\nUSER #{@@config[:user][:nick]} 8 * :#{@@config[:user][:real]}\r\n")
       end
