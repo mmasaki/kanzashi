@@ -26,10 +26,8 @@ module Kanzashi
       params = line.split
       params.each do |param|
         if /^:?(#|%|!)/ =~ param
-          channels = []
-          param.split(",").each do |channel|
-            channels << "#{channel}@#{@server_name}"
-          end
+          channels = param.split(",")
+          channels.map! { |channel| "#{channel}@#{@server_name}" }
           param.replace(channels.join(","))
           break
         end
