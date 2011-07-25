@@ -40,11 +40,11 @@ module Kanzashi
       line.encode!(Encoding::UTF_8, @encoding, {:invalid => :replace})
       case m.command
       when "PING"
-        send_data "PONG #{config[:nick]}\r\n" # reply to ping
+        send_data "PONG #{config[:user][:nick]}\r\n" # reply to ping
       when "JOIN"
         channel_sym = m[0].to_s.to_sym
         @channels[channel_sym] = [] unless @channels.has_key?(channel_sym)
-        relay(channel_rewrite(line))
+#        relay(channel_rewrite(line))
       when "332", "333", "366"
         channel_sym = m[1].to_s.to_sym
         rewrited_message = channel_rewrite(line)
@@ -76,8 +76,7 @@ module Kanzashi
     def join(channel_name)
       channel_sym = channel_name.to_sym
       if @channels.has_key?(channel_sym) # cases that kanzashi already joined specifed channnel
-        relay(":#{config[:nick]} JOIN :#{channel_name}@#{@server_name}\r\n")
-        @channels[channel_sym].each { |line| relay(line) } # send cached who list
+        @channels[channel_sym].each {|line| relay(line) } # send cached who list
       else # cases that kanzashi hasn't joined specifed channnel yet
         send_data("JOIN #{channel_name}\r\n")
       end

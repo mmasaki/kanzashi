@@ -7,6 +7,7 @@ module Kanzashi
     def initialize
       Client.add_connection(self)
       @buffer = BufferedTokenizer.new("\r\n")
+      @user = {}
     end
 
     def post_init
@@ -21,7 +22,7 @@ module Kanzashi
       config[:networks].each do |server_name, value|
         connection = EventMachine::connect(value[:host], value[:port], Client, server_name, value[:encoding], value[:tls])
         @@servers[server_name] = connection
-        connection.send_data("NICK #{config[:user][:nick]}\r\nUSER #{config[:user][:user]||config[:user][:nick]} 8 * :#{config[:user][:real]}\r\n")
+        connection.send_data("NICK #{config[:user][:nick]}\r\nUSER #{config[:user][:username]||config[:user][:nick]} 8 * :#{config[:user][:realname]}\r\n")
       end
     end
 
@@ -37,11 +38,16 @@ module Kanzashi
       close_connection unless @auth # cases where the user fails in authentication
       case m.command
       when "NICK", "PONG"
+        @user[:nick] == m[0].to_s
         # do nothing
       when "USER"
         send_data "001 #{m[0]} welcome to Kanzashi.\r\n"
+        @user[:username] = m[0].to_s
+        @user[:realname] = m[3].to_s
       when "JOIN"
-        m[0].split(",").each do |channel|
+        channels = m[0].split(",")
+        channels.each do |channel|
+          send_data ":#{@user[:username]} JOIN #{channel}\r\n"
           channel_name, server = split_channel_and_server(channel)
           server.join(channel_name)
         end
