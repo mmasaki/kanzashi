@@ -125,9 +125,9 @@ module Kanzashi
       @@servers = {}
       # connect to specified server
       @@config[:servers].each do |server_name, value|
-        connection = EventMachine::connect(value[0], value[1], Client, server_name, value[2], value[3])
+        connection = EventMachine::connect(value[:host], value[:port], Client, server_name, value[:encoding], value[:use_tls])
         @@servers[server_name] = connection
-        connection.send_data("NICK #{@@config[:nick]}\r\nUSER #{@@config[:nick]} 8 * :#{@@config[:realname]}\r\n")
+        connection.send_data("NICK #{@@config[:nick]}\r\nUSER #{@@config[:username]} 8 * :#{@@config[:realname]}\r\n")
       end
     end
 
