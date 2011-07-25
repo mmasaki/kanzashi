@@ -2,11 +2,56 @@
 require 'eventmachine'
 require 'net/irc'
 require 'yaml'
+require 'optparse'
 require 'digest/sha2'
 
 module Kanzashi
   DEBUG = true # a flag to enable/disable debug print
   @@config = nil
+
+  module Util
+    class CustomHash < Hash
+      class << self
+        undef new
+        def new(a)
+          self[a]
+        end
+      end
+
+      def self.[](a)
+        h = (super a.to_a)
+        h.keys.select{|key| key.kind_of?(String) }.each do |key|
+          h[key.to_sym] = h.delete(key)
+        end
+        h.each do |key,value|
+          case value
+          when Array
+            h[key] = CustomArray.new(value)
+          when Hash
+            h[key] = CustomHash.new(value)
+          end
+        end
+        h
+      end
+
+      def method_missing(name,*args)
+        self[name] || super
+      end
+    end
+
+    class CustomArray < Array
+      def initialize(*args)
+        super *args
+        self.map! do |x|
+          if x.kind_of?(Hash) && x.class != CustomHash
+            CustomHash.new(x)
+          else; x; end
+        end
+      end
+    end
+  end
+
+  @@config = {}
 
   # debug print
   def debug_p(str)
@@ -72,9 +117,9 @@ module Kanzashi
       else
         debug_p line
         relay(channel_rewrite(line))
-      end  
+      end
     end
-  
+
     # process receiveed data
     def receive_data(data)
       @buffer.extract(data).each do |line|
@@ -98,7 +143,7 @@ module Kanzashi
         send_data("JOIN #{channel_name}\r\n")
       end
     end
-  
+
     def send_data(data)
       debug_p self
       debug_p data
@@ -117,24 +162,49 @@ module Kanzashi
     end
 
     def post_init
-      start_tls(@@config[:tls_opts] ? @@config[:tls_opts] : {}) if @@config[:use_tls] # enable TLS
+      if @@config[:server][:tls] # enable TLS
+        start_tls(@@config[:server][:tls].kind_of?(Hash) ? @@config[:server][:tls] : {})
+      end
     end
 
-    def self.start_and_connect(config_filename)
-      @@config = YAML.load(File.open(config_filename))
+    def self.load_config(filename)
+      @@config = {}
+      @@config.merge! YAML.load(open(filename))
+      @@config = Util::CustomHash.new(@@config)
+    end
+
+    def self.parse(argv)
+      parser = OptionParser.new
+      config_file = "config.yml"
+
+      parser.on('-c FILE','--config=FILE','specify config file') do |file|
+        config_file = file
+      end
+
+      parser.parse(argv)
+
+      load_config(config_file)
+      self
+    end
+
+    def self.start_and_connect
       @@servers = {}
       # connect to specified server
       @@config[:servers].each do |server_name, value|
         connection = EventMachine::connect(value[:host], value[:port], Client, server_name, value[:encoding], value[:use_tls])
         @@servers[server_name] = connection
-        connection.send_data("NICK #{@@config[:nick]}\r\nUSER #{@@config[:username]} 8 * :#{@@config[:realname]}\r\n")
+        connection.send_data("NICK #{@@config[:user][:nick]}\r\nUSER #{@@config[:user][:nick]} 8 * :#{@@config[:user][:real]}\r\n")
       end
     end
 
     def receive_line(line)
       m = Net::IRC::Message.parse(line)
+      p m
       if  m.command ==  "PASS"
-        @auth = @@config[:pass] == Digest::SHA256.hexdigest(m[0].to_s)
+        p @@config[:server][:pass]
+        p m[0].to_s
+        @auth = (@@config[:server][:pass] == Digest::SHA256.hexdigest(m[0].to_s) || @@config[:server][:pass] == m[0].to_s)
+        p @auth
       end
       close_connection unless @auth
       case m.command
