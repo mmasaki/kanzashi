@@ -39,7 +39,7 @@ module Kanzashi
     def channel_rewrite(line)
       params = line.split
       params.each do |param|
-        if /#|%|!/ =~ param
+        if /^:?(#|%|!)/ =~ param
           channels = []
           param.split(",").each do |channel|
             channels << "#{channel}@#{@server_name}"
@@ -59,7 +59,7 @@ module Kanzashi
         send_data "PONG Kanzashi\r\n"
       when "JOIN"
         channel_sym = m[0].to_s.to_sym
-        @channels[channel_sym] = [] unless @channels.keys.include?(channel_sym)
+        @channels[channel_sym] = [] unless @channels.has_key?(channel_sym)
         relay(channel_rewrite(line))
       when "332", "333", "366"
         channel_sym = m[1].to_s.to_sym
@@ -162,7 +162,7 @@ module Kanzashi
     end
 
     def split_channel_and_server(channel)
-      if /(.+)@(.+)/ =~ channel
+      if /^:?((?:#|%|!).+)@(.+)/ =~ channel
         channel_name = $1
         server = @@servers[$2.to_sym]
       end
