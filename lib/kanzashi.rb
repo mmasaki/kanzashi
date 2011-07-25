@@ -6,6 +6,7 @@ require 'digest/sha2'
 
 module Kanzashi
   DEBUG = true # a flag to enable/disable debug print
+  @@config = nil
 
   # debug print
   def debug_p(str)
