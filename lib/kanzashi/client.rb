@@ -73,7 +73,7 @@ module Kanzashi
 
     def join(channel_name)
       channel_sym = channel_name.to_sym
-      if @channels.keys.include?(channel_sym)
+      if @channels.has_key?(channel_sym)
         relay(":#{config[:nick]} JOIN :#{channel_name}@#{@server_name}\r\n")
         @channels[channel_sym].each do |line|
           relay(line)
