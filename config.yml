@@ -1,23 +1,32 @@
-:nick: Kanzashi
-:username: Kanzashi
-:realname: Kanzashi
-:pass: d74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1
-:use_tls: true
-:servers:
-  :ircnet:
-    :host: irc.ircnet.ne.jp
-    :port: 6668
-    :encoding: ISO-2022-JP
-  :FriendChat:
-    :host: irc.friend-chat.jp
-    :port: 6664
-    :encoding: ISO-2022-JP
-  :Freenode:
-    :host: irc.freenode.net
-    :port:  7070
-    :encoding: utf-8
-    :use_tls: true
-:plugins:
-  :log:
-    :enable: true
-    :filename: test.log
+user:
+  nick: kanzashi
+  user: kanzashi
+  real: kanzashi the accessory
+server:
+  # bind: 0.0.0.0
+  # port: 8081
+  pass: proxy_pass
+  # Or SHA1 sum is acceptable.
+  # pass: d74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1
+networks:
+  network_name: # network name is used for channel name.
+    host: irc.example.org
+    port: 6667
+    encoding: UTF-8
+    # tls: true
+
+  # -- Examples
+  # ircnet:
+  #   host: irc.ircnet.ne.jp
+  #   port: 6668
+  #   encoding: ISO-2022-JP
+  # friend:
+  #   host: irc.friend-chat.jp
+  #   port: 6664
+  #   encoding: ISO-2022-JP
+  # freenode:
+  #   host: irc.freenode.net
+  #   port:  7070
+  #   encoding: utf-8
+  #   tls: true
+

@@ -175,6 +175,7 @@ module Kanzashi
           real: "kanzashi that better tiarra"
         },
         server: {
+          port: 8081,
           bind: "0.0.0.0",
           pass: nil,
           tls: false
