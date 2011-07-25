@@ -168,8 +168,26 @@ module Kanzashi
     end
 
     def self.load_config(filename)
-      @@config = {}
-      @@config.merge! YAML.load(open(filename))
+      @@config = {
+        user: {
+          nick: "kanzashi",
+          user: "kanzashi",
+          real: "kanzashi that better tiarra"
+        },
+        server: {
+          bind: "0.0.0.0",
+          pass: nil,
+          tls: false
+        },
+        networks: {}
+      }
+      yaml =  Util::CustomHash.new(YAML.load(open(filename)))
+      [:user,:server].each do |k|
+        if (_ = yaml.delete(k))
+          @@config[k].merge! _
+        end
+      end
+      @@config.merge! yaml
       @@config = Util::CustomHash.new(@@config)
     end
 
