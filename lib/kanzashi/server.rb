@@ -28,15 +28,16 @@ module Kanzashi
     def receive_line(line)
       m = Net::IRC::Message.parse(line)
       p m
-      if  m.command ==  "PASS"
+      if  m.command ==  "PASS" # authenticate
         p config[:server][:pass]
-        p m[0].to_s
+        p m[0]
         @auth = (config[:server][:pass] == Digest::SHA256.hexdigest(m[0].to_s) || config[:server][:pass] == m[0].to_s)
         p @auth
       end
-      close_connection unless @auth
+      close_connection unless @auth # cases where the user fails in authentication
       case m.command
       when "NICK", "PONG"
+        # do nothing
       when "USER"
         send_data "001 #{m[0]} welcome to Kanzashi.\r\n"
       when "JOIN"
@@ -64,7 +65,7 @@ module Kanzashi
         channel_name = $1
         server = @@servers[$2.to_sym]
       end
-      unless server # in the case where the user specifies invaild server
+      unless server # in cases where the user specifies invaild server
         channel_name = channel
         server = @@servers.first[1] # the first connection of servers list
       end
@@ -96,5 +97,4 @@ module Kanzashi
       send_data(data)
     end
   end
-
 end
