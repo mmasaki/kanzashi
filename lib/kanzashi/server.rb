@@ -28,6 +28,7 @@ module Kanzashi
 
     def receive_line(line)
       m = Net::IRC::Message.parse(line)
+      Hook.call(:receive_line, line, m)
       p m
       if  m.command ==  "PASS" # authenticate
         p config[:server][:pass]
