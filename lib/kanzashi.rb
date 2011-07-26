@@ -5,12 +5,6 @@ require 'yaml'
 require 'optparse'
 require 'digest/sha2'
 
-require_relative "kanzashi/util"
-require_relative "kanzashi/hook"
-require_relative "kanzashi/client"
-require_relative "kanzashi/config"
-require_relative "kanzashi/server"
-
 module Kanzashi
   DEBUG = true # a flag to enable/disable debug print
 
@@ -20,3 +14,12 @@ module Kanzashi
     p str if DEBUG
   end
 end
+
+require_relative "kanzashi/util"
+require_relative "kanzashi/hook"
+require_relative "kanzashi/client"
+require_relative "kanzashi/config"
+require_relative "kanzashi/server"
+
+K = Kanzashi
+Kh = Kanzashi::Hook
