@@ -29,10 +29,10 @@ module Kanzashi
     def receive_line(line)
       m = Net::IRC::Message.parse(line)
       if config[:server][:pass]
+        @auth ||= false
         if m.command == "PASS" # authenticate
           @auth = (config[:server][:pass] == Digest::SHA256.hexdigest(m[0].to_s) \
                 || config[:server][:pass] == m[0].to_s)
-          close_connection unless @auth # cases where the user fails in authentication
         end
       else
         @auth = true
@@ -42,6 +42,10 @@ module Kanzashi
         @user[:nick] == m[0].to_s
         # do nothing
       when "USER"
+        unless @auth
+          send_data "ERROR :Bad password?\r\n"
+          close_connection(true) # close after writing
+        end
         send_data "001 #{m[0]} welcome to Kanzashi.\r\n"
         @user[:username] = m[0].to_s
         @user[:realname] = m[3].to_s
