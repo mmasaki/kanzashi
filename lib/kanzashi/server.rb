@@ -17,13 +17,17 @@ module Kanzashi
     end
 
     def self.start_and_connect
+      Hook.call(:start)
       @@servers = {}
       # connect to specified server
       config[:networks].each do |server_name, value|
+        Hook.call(:connect, server_name)
         connection = EventMachine::connect(value[:host], value[:port], Client, server_name, value[:encoding], value[:tls])
         @@servers[server_name] = connection
         connection.send_data("NICK #{config[:user][:nick]}\r\nUSER #{config[:user][:username]||config[:user][:nick]} 8 * :#{config[:user][:realname]}\r\n")
+        Hook.call(:connected, server_name)
       end
+      Hook.call(:started)
     end
 
     def receive_line(line)
