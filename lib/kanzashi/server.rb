@@ -28,12 +28,8 @@ module Kanzashi
 
     def receive_line(line)
       m = Net::IRC::Message.parse(line)
-      p m
       if  m.command ==  "PASS" # authenticate
-        p config[:server][:pass]
-        p m[0]
         @auth = (config[:server][:pass] == Digest::SHA256.hexdigest(m[0].to_s) || config[:server][:pass] == m[0].to_s)
-        p @auth
       end
       close_connection unless @auth # cases where the user fails in authentication
       case m.command
