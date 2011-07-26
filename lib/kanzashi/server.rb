@@ -17,6 +17,9 @@ module Kanzashi
     end
 
     def self.start_and_connect
+      # load plugins
+      Plugin.plug_all
+
       Hook.call(:start)
       @@servers = {}
       # connect to specified server
