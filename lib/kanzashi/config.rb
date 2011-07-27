@@ -16,7 +16,7 @@ module Kanzashi
       },
       networks: {},
       plugins: {}
-    }
+    }.freeze
     @@config = Util::CustomHash.new(DEFAULT)
     @@old_config = nil
 
@@ -28,9 +28,9 @@ module Kanzashi
       end
 
       def load_config(str=nil)
-        @@old_config = @@config.dup
+        @@old_config = Util::CustomHash.new(@@config)
         file = str || open(@@config[:config_file])
-        yaml = Util::CustomHash.new(YAML.load(file))
+        yaml = Util::CustomHash.new(YAML.load(file)||{})
         yaml.delete :config_file
         [:user,:server].each do |k|
           if (_ = yaml.delete(k))

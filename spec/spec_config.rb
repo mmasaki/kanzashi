@@ -2,10 +2,10 @@ require_relative './helper'
 
 describe Kanzashi::Config do
   it "@@config is customhash" do
-    Kanzashi::Config.instance_eval { @@config }.should be_a_kind_of(Kanzashi::Util::CustomHash)
+    Kanzashi::Config.class_variable_get(:"@@config").should be_a_kind_of(Kanzashi::Util::CustomHash)
   end
 
-  descibe ".load_config" do
+  describe ".load_config" do
     before do
       Kanzashi::Config.reset
     end
@@ -20,7 +20,7 @@ describe Kanzashi::Config do
       server:
         bind: 127.0.0.1
       EOF
-      Kanzashi::Config.config.should != Kanzashi::Config::DEFAULT
+      Kanzashi::Config.config.should_not == Kanzashi::Config::DEFAULT
       Kanzashi::Config.config.user.nick.should == "hi"
       Kanzashi::Config.config.user.user.should == "kanzashi"
       Kanzashi::Config.config.server.port.should == 8082
@@ -34,10 +34,14 @@ describe Kanzashi::Config do
       server:
         bind: 127.0.0.1
       EOF
-      Kanzashi::Config.instance_eval { @@old_config }.should == Kanzashi::Config::DEFAULT
+      Kanzashi::Config.class_variable_get(:"@@old_config").should == Kanzashi::Config::DEFAULT
     end
 
-    it "can't edit config_file" do
+    it "can't modify config_file" do
+      Kanzashi::Config.load_config(<<-EOF)
+      config_file: shouldnt_be_hacked.yml
+      EOF
+      Kanzashi::Config.config.config_file.should == "config.yml"
     end
   end
 
@@ -47,6 +51,8 @@ describe Kanzashi::Config do
     end
 
     it "returns customhash" do
+      Kanzashi::Config.load_config("")
+      Kanzashi::Config.config.should be_a_kind_of(Kanzashi::Util::CustomHash)
     end
   end
 
@@ -56,6 +62,12 @@ describe Kanzashi::Config do
     end
 
     it "-c option" do
+      begin
+        Kanzashi::Config.parse(["-c","configa.yml"])
+      rescue Exception
+      end
+      Kanzashi::Config.config.config_file.should == "configa.yml"
+
     end
   end
 end
