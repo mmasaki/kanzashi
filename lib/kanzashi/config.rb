@@ -1,7 +1,7 @@
 module Kanzashi
   module Config
     include Kanzashi
-    @@config = {
+    DEFAULT = {
       config_file: "config.yml",
       user: {
         nick: "kanzashi",
@@ -16,13 +16,20 @@ module Kanzashi
       },
       networks: {}
     }
+    @@config = Util::CustomHash.new(DEFAULT)
     @@old_config = nil
-    @@config = Util::CustomHash.new(@@config)
 
     class << self
-      def load_config
+      def reset
+        @@old_config = nil
+        @@config = Util::CustomHash.new(DEFAULT)
+        self
+      end
+
+      def load_config(str=nil)
         @@old_config = @@config.dup
-        yaml = Util::CustomHash.new(YAML.load(open(@@config[:config_file])))
+        file = str || open(@@config[:config_file])
+        yaml = Util::CustomHash.new(YAML.load(file))
         yaml.delete :config_file
         [:user,:server].each do |k|
           if (_ = yaml.delete(k))
