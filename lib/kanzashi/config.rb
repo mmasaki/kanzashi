@@ -14,7 +14,8 @@ module Kanzashi
         pass: nil,
         tls: false
       },
-      networks: {}
+      networks: {},
+      plugins: {}
     }
     @@config = Util::CustomHash.new(DEFAULT)
     @@old_config = nil

@@ -16,20 +16,9 @@ TBD
 
 Write in YAML.
 
-    user:
-      nick: your nickname
-      user: your username
-      real: your realname
-    server:
-      bind: 0.0.0.0
-      pass: proxy_pass (SHA1 acceptable)
-      tls: true
-        ... # if you have option, write here as Hash instead of true.
-    networks:
-      network_name:
-        host: irc.example.net
-        port: 6667
-        encoding: utf-8
+Copy `config.sample.yml` ...
+
+TBD.
 
 ## License
 

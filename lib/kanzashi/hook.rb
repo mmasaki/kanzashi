@@ -29,10 +29,11 @@ module Kanzashi
         call_(name,args)
       end
 
-      def call_(name,args,namespace=nil)
+      def call_(type,args,namespace=nil)
         @@hooks.each do |name, space|
           next if !namespace.nil? && name != namespace
-          space.each do |type, hooks|
+          space.each do |t, hooks|
+            next unless type == t
             hooks.each do |hook|
               hook.call *args
             end

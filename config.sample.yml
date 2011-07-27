@@ -31,3 +31,10 @@ networks:
   #   encoding: utf-8
   #   tls: true
 
+plugins:
+  plugin_name:
+    enabled: false
+    # the following key-values will be passed to plugin
+    plugin_configuration: aaa
+
+
