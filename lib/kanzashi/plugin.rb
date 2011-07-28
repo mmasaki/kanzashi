@@ -22,14 +22,12 @@ module Kanzashi
       def plug(x)
         list unless @@old_plugins
         Hook.make_space(x) do
-          p @@plugins
           load @@plugins[x][:path]
         end
       end
 
       def plug_all
         config.plugins.each do |name,cfg|
-          p name if cfg.enabled
           plug name if cfg.enabled
         end
       end
