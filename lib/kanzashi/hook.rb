@@ -4,6 +4,8 @@ module Kanzashi
     @@namespace = :global
     @@hooks = {}
     class << self
+      include Kanzashi
+
       def make_space(name)
         @@lock.synchronize do
           @@namespace = name
