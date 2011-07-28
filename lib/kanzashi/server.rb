@@ -35,21 +35,21 @@ module Kanzashi
     def receive_line(line)
       m = Net::IRC::Message.parse(line)
       if config[:server][:pass]
-        @auth ||= false
         if m.command == "PASS" # authenticate
           @auth = (config[:server][:pass] == Digest::SHA256.hexdigest(m[0].to_s) \
                 || config[:server][:pass] == m[0].to_s)
         end
-      else
+      else # the case where the user has not specified password
         @auth = true
       end
-      unless @auth
+      unless @auth # Without authentication, it is needed to refuse all message except PASS
         send_data "ERROR :Bad password?\r\n"
         close_connection(true) # close after writing
       end
       case m.command
-      when "NICK", "PONG"
+      when "NICK"
         @user[:nick] == m[0].to_s
+      when "PONG"
         # do nothing
       when "USER"
         send_data "001 #{m[0]} welcome to Kanzashi.\r\n"
@@ -64,7 +64,7 @@ module Kanzashi
         end
       when "QUIT"
         send_data "ERROR :Closing Link.\r\n"
-        close_connection
+        close_connection(true) # close after writing
       else
         send_server(line)
       end
