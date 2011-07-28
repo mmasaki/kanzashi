@@ -25,7 +25,7 @@ module Kanzashi
       end
 
       def method_missing(name,*args)
-        self[name] || super
+        self.has_key?(name) ? self[name] : super
       end
     end
 
