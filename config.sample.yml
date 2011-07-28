@@ -36,5 +36,3 @@ plugins:
     enabled: false
     # the following key-values will be passed to plugin
     plugin_configuration: aaa
-
-
