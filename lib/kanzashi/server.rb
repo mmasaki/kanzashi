@@ -43,15 +43,15 @@ module Kanzashi
       else
         @auth = true
       end
+      unless @auth
+        send_data "ERROR :Bad password?\r\n"
+        close_connection(true) # close after writing
+      end
       case m.command
       when "NICK", "PONG"
         @user[:nick] == m[0].to_s
         # do nothing
       when "USER"
-        unless @auth
-          send_data "ERROR :Bad password?\r\n"
-          close_connection(true) # close after writing
-        end
         send_data "001 #{m[0]} welcome to Kanzashi.\r\n"
         @user[:username] = m[0].to_s
         @user[:realname] = m[3].to_s
