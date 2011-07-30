@@ -14,6 +14,7 @@ module Kanzashi
         pass: nil,
         tls: false
       },
+      log: {},
       networks: {},
       plugins: {}
     }.freeze

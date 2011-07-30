@@ -2,6 +2,9 @@ module Kanzashi
   # a module to communicate with IRC servers as a client
   module Client
     include Kanzashi
+    class << self; include UtilMethod; end
+
+    include Kanzashi
     @@relay_to = [] # an array includes connections to relay
 
     def initialize(server_name, encoding, use_tls=false)
@@ -57,7 +60,7 @@ module Kanzashi
         @channels[channel_sym] << rewrited_message if @channels.has_key?(channel_sym)
         relay(rewrited_message)
       else
-        debug_p line
+        log.debug("Client #{self} recv") { line }
         relay(channel_rewrite(line))
       end
     end
@@ -84,8 +87,7 @@ module Kanzashi
     end
 
     def send_data(data)
-      debug_p self
-      debug_p data
+      log.debug("Client #{self} send_data") { data.inspect }
       data.encode!(@encoding, Encoding::UTF_8, {:invalid => :replace})
       super
     end

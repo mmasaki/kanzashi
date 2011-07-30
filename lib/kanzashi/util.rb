@@ -39,14 +39,34 @@ module Kanzashi
         end
       end
     end
-
   end
 
   module UtilMethod
     def config
       Config.config
     end
+
+    def log
+      Log.logger
+    end
   end
+
+  class Log
+    include Kanzashi
+    class << self; include UtilMethod; end
+
+    @@logger = nil
+
+    def self.logger
+      unless @@logger
+        @@logger = Logger.new(config.log.output||STDOUT)
+        @@logger.level = config.log.level if config.log.level
+      end
+      @@logger
+    end
+
+  end
+
   include UtilMethod
   class << self; include UtilMethod; end
 end
