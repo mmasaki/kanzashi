@@ -7,8 +7,11 @@ module Kanzashi
       include Kanzashi
 
       def make_space(name)
+        raise ArgumentError, "can't make :global" if name == :global
+
         @@lock.synchronize do
           @@namespace = name
+          @@hooks.delete(name)
           yield
           @@namespace = :global
         end
@@ -45,6 +48,12 @@ module Kanzashi
 
       def method_missing(name,*args,&block)
         hook(name,&block)
+      end
+
+      def remove_space(name)
+        raise ArgumentError, "can't remove :global" if name == :global
+        @@hooks.delete(name)
+        self
       end
     end
   end

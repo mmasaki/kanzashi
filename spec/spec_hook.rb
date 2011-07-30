@@ -77,6 +77,16 @@ describe Kanzashi::Hook do
       hooks[:test_d][:test_namespace_example].size.should == 1
     end
 
+    it "removes old hooks" do
+      a = false
+      Kanzashi::Hook.make_space(:test_remove) do
+        Kanzashi::Hook.hook(:hi){ a = true }
+      end
+      Kanzashi::Hook.make_space(:test_remove) {}
+      Kanzashi::Hook.call(:hi)
+      a.should_not be_true
+    end
+
     it "is thread-safe" do
       a = Thread.new {
         Kanzashi::Hook.make_space(:test_e) do
@@ -90,6 +100,23 @@ describe Kanzashi::Hook do
       hooks = Kanzashi::Hook.class_variable_get(:"@@hooks")
       hooks[:test_e][:test_namespace_example].size.should == 1
       hooks[:test_f][:test_namespace_example].size.should == 1
+    end
+
+    it "raises error when making :global space" do
+      ->{ Kanzashi::Hook.make_space(:global) }.should raise_error(ArgumentError)
+    end
+  end
+
+  describe ".remove_space" do
+    it "removes namespace" do
+      Kanzashi::Hook.make_space(:test_remove) {}
+      Kanzashi::Hook.remove_space(:test_remove)
+      hooks = Kanzashi::Hook.class_variable_get(:"@@hooks")
+      hooks.has_key?(:test_remove).should_not be_true
+    end
+
+    it "raises error when removing :global" do
+      ->{ Kanzashi::Hook.remove_space(:global) }.should raise_error(ArgumentError)
     end
   end
 end
