@@ -6,6 +6,7 @@ module Kanzashi
 
     def initialize
       Client.add_connection(self)
+      Hook.call(:new_connection,self)
       @buffer = BufferedTokenizer.new("\r\n")
       @user = {}
     end
@@ -34,6 +35,7 @@ module Kanzashi
 
     def receive_line(line)
       m = Net::IRC::Message.parse(line)
+      Hook.call(:receive_line,m,line)
       if config.server.pass
         if m.command == "PASS" # authenticate
           @auth = (config.server.pass == Digest::SHA256.hexdigest(m[0].to_s) \
@@ -43,6 +45,7 @@ module Kanzashi
         @auth = true
       end
       unless @auth # Without authentication, it is needed to refuse all message except PASS
+        Hook.call(:bad_password,self)
         send_data "ERROR :Bad password?\r\n"
         close_connection(true) # close after writing
       end
@@ -52,6 +55,7 @@ module Kanzashi
       when "PONG"
         # do nothing
       when "USER"
+        Hook.call(:new_session,self)
         send_data "001 #{m[0]} welcome to Kanzashi.\r\n"
         @user[:username] = m[0].to_s
         @user[:realname] = m[3].to_s
@@ -63,6 +67,7 @@ module Kanzashi
           server.join(channel_name)
         end
       when "QUIT"
+        Hook.call(:quit,self)
         send_data "ERROR :Closing Link.\r\n"
         close_connection(true) # close after writing
       else
