@@ -74,8 +74,6 @@ server:
       Kh.mock_close { a = true }
     end
     @server.line "PASS hola"
-    @server.line "NICK kanzashi"
-    @server.line "USER kanzashi kanzashi kanzashi"
     @server.datas[-1].should match(/^ERROR/)
     a.should be_true
   end
