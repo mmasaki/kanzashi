@@ -8,6 +8,7 @@ require 'stringio'
 
 class TestIRCd < Net::IRC::Server::Session
   @@instance = nil
+  @@waited = false
 
   def self.instance; @@instance; end
 
@@ -15,9 +16,16 @@ class TestIRCd < Net::IRC::Server::Session
 
   def self.go
     @@instance = Net::IRC::Server.new(
-      "127.0.0.1", 0, NetIrcServer,
+      "127.0.0.1", 0, self,
       {logger: Logger.new(StringIO.new("","w"))})
     @@instance.start
+    @@waited = false
+  end
+
+  def self.wait
+     return if @@waited
+     nil until ["run","sleep"].include?(@@instance.instance_eval{@accept ? @accept.status : nil})
+     @@waited = true
   end
 
   def server_name
@@ -187,6 +195,8 @@ class TestIRCd < Net::IRC::Server::Session
   end
 
   def on_privmsg(m)
+    Kh.call(:server_privmsg, m)
+
     while (Time.now.to_i - @updated_on < 2)
       sleep 2
     end
