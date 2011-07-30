@@ -24,7 +24,7 @@ module Kanzashi
       # connect to specified server
       config[:networks].each do |server_name, value|
         Hook.call(:connect, server_name)
-        connection = EventMachine::connect(value[:host], value[:port], Client, server_name, value[:encoding], value[:tls])
+        connection = EventMachine::connect(value[:host], value[:port], Client, server_name, value[:encoding]||"UTF-8", value[:tls])
         @@servers[server_name] = connection
         connection.send_data("NICK #{config[:user][:nick]}\r\nUSER #{config[:user][:user]||config[:user][:nick]} 8 * :#{config[:user][:real]}\r\n")
         Hook.call(:connected, server_name)
