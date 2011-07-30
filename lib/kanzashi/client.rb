@@ -41,7 +41,7 @@ module Kanzashi
       Hook.call(m.command.downcase.to_sym, m)
       case m.command
       when "PING"
-        send_data "PONG #{config[:user][:nick]}\r\n" # reply to ping
+        send_data "PONG #{config.user.nick}\r\n" # reply to ping
       when "JOIN"
         channel_sym = m[0].to_s.to_sym
         @channels[channel_sym] = [] unless @channels.has_key?(channel_sym)

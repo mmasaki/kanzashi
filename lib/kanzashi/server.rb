@@ -11,8 +11,8 @@ module Kanzashi
     end
 
     def post_init
-      if config[:server][:tls] # enable TLS
-        start_tls(config[:server][:tls].kind_of?(Hash) ? config[:server][:tls] : {})
+      if config.server.tls # enable TLS
+        start_tls(config.server.tls.kind_of?(Hash) ? config.server.tls : {})
       end
     end
 
@@ -22,11 +22,11 @@ module Kanzashi
       Hook.call(:start)
       @@servers = {}
       # connect to specified server
-      config[:networks].each do |server_name, value|
+      config.networks.each do |server_name, value|
         Hook.call(:connect, server_name)
-        connection = EventMachine::connect(value[:host], value[:port], Client, server_name, value[:encoding]||"UTF-8", value[:tls])
+        connection = EventMachine::connect(value.host, value.port, Client, server_name, value.encoding||"UTF-8", value.tls)
         @@servers[server_name] = connection
-        connection.send_data("NICK #{config[:user][:nick]}\r\nUSER #{config[:user][:user]||config[:user][:nick]} 8 * :#{config[:user][:real]}\r\n")
+        connection.send_data("NICK #{config.user.nick}\r\nUSER #{config.user.user||config.user.nick} 8 * :#{config.user.real}\r\n")
         Hook.call(:connected, server_name)
       end
       Hook.call(:started)
@@ -34,10 +34,10 @@ module Kanzashi
 
     def receive_line(line)
       m = Net::IRC::Message.parse(line)
-      if config[:server][:pass]
+      if config.server.pass
         if m.command == "PASS" # authenticate
-          @auth = (config[:server][:pass] == Digest::SHA256.hexdigest(m[0].to_s) \
-                || config[:server][:pass] == m[0].to_s)
+          @auth = (config.server.pass == Digest::SHA256.hexdigest(m[0].to_s) \
+                || config.server.pass == m[0].to_s)
         end
       else # the case where the user has not specified password
         @auth = true
