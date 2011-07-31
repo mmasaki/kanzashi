@@ -21,21 +21,27 @@ module Kanzashi
       # load plugins
       Plugin.plug_all
       Hook.call(:start)
+      log.info("Server:start") {"Kanzashi starting..."}
       @@servers = {}
       # connect to specified server
       config.networks.each do |server_name, value|
+        log.info("Server:connect") {"Connecting to #{server_name}..."}
         Hook.call(:connect, server_name)
+        log.debug("Server:connect") {"#{server_name}: #{value}"}
         connection = EventMachine::connect(value.host, value.port, Client, server_name, value.encoding||"UTF-8", value.tls)
         @@servers[server_name] = connection
         connection.send_data("NICK #{config.user.nick}\r\nUSER #{config.user.user||config.user.nick} 8 * :#{config.user.real}\r\n")
         Hook.call(:connected, server_name)
+        log.info("Server:connect") {"Connected to #{server_name}."}
       end
+      log.info("Server:start") {"Kanzashi started."}
       Hook.call(:started)
     end
 
     def receive_line(line)
       m = Net::IRC::Message.parse(line)
-      Hook.call(:receive_line,m,line)
+      log.debug("Server:receive_line") {"Received line: #{line.chomp.inspect}"}
+      Hook.call(:receive_line,m,line.chomp)
       if config.server.pass
         if m.command == "PASS" # authenticate
           @auth = (config.server.pass == Digest::SHA256.hexdigest(m[0].to_s) \

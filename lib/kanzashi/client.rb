@@ -15,6 +15,11 @@ module Kanzashi
       @use_tls = use_tls
     end
 
+    def inspect
+      "#<Client:#{@server_name}>"
+    end
+    alias to_s inspect
+
     def post_init
       start_tls if @use_tls # enable TLS
     end
@@ -60,7 +65,7 @@ module Kanzashi
         @channels[channel_sym] << rewrited_message if @channels.has_key?(channel_sym)
         relay(rewrited_message)
       else
-        log.debug("Client #{self} recv") { line }
+        log.debug("Client #{@server_name}:recv") { line.inspect }
         relay(channel_rewrite(line))
       end
     end
@@ -87,7 +92,7 @@ module Kanzashi
     end
 
     def send_data(data)
-      log.debug("Client #{self} send_data") { data.inspect }
+      log.debug("Client #{@server_name}:send_data") { data.inspect }
       data.encode!(@encoding, Encoding::UTF_8, {:invalid => :replace})
       super
     end
