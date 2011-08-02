@@ -22,6 +22,8 @@ module Kanzashi
     @@config = Util::CustomHash.new(DEFAULT)
     @@old_config = nil
 
+    class ValidateError < Exception; end
+
     class << self
       def reset
         @@old_config = nil
@@ -37,6 +39,20 @@ module Kanzashi
         [:user,:server].each do |k|
           if (_ = yaml.delete(k))
             @@config[k].merge! _
+          end
+        end
+        if (_ = yaml.delete(:networks))
+          _.each do |k,v|
+            if @@config.networks[k]
+              @@config.networks[k].merge! v
+            else
+              nv = {
+                encoding: "UTF-8",
+                join_to: []
+              }.merge(v)
+              raise ValidateError, "network config needs host,port" unless nv[:host] && nv[:port]
+              @@config.networks[k] = Util::CustomHash.new(nv)
+            end
           end
         end
         @@config.merge! yaml

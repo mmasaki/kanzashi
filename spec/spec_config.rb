@@ -43,6 +43,29 @@ describe Kanzashi::Config do
       EOF
       Kanzashi::Config.config.config_file.should == "config.yml"
     end
+
+    it "sets default values of 'networks'" do
+      Kanzashi::Config.load_config(<<-EOF)
+networks:
+  local:
+    host: 127.0.0.1
+    port: 6667
+      EOF
+      Kanzashi::Config.config.networks.local.host == "127.0.0.1"
+      Kanzashi::Config.config.networks.local.port == 6667
+      Kanzashi::Config.config.networks.local.join_to == []
+      Kanzashi::Config.config.networks.local.encoding == "UTF-8"
+    end
+
+    it "validates 'networks'" do
+      ->{
+        Kanzashi::Config.load_config(<<-EOF)
+networks:
+  local2:
+    encoding: UTF-8
+        EOF
+      }.should raise_error(Kanzashi::Config::ValidateError)
+    end
   end
 
   describe ".config" do
