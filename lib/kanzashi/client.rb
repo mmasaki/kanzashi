@@ -35,7 +35,7 @@ module Kanzashi
       params.each do |param|
         if /^:?(#|%|!)/ =~ param
           channels = param.split(",")
-          channels.map! { |channel| "#{channel}@#{@server_name}" }
+          channels.map! { |channel| "#{channel}#{config.separator}#{@server_name}" }
           param.replace(channels.join(","))
           break
         end
@@ -58,11 +58,11 @@ module Kanzashi
         config.networks[@server_name].join_to.each do |channel|
           # TODO: should use String#prepend
           channel = "##{channel}" unless /^#/ =~ channel
-          send_data "JOIN #{channel}\r\n"
+          join(channel)
           sleep 0.2
         end
         Kh.call(:client_welcome, self)
-      when "332", "333", "366"
+      when "332", "333", "366" # TODO: Able to refact
         channel_sym = m[1].to_s.to_sym
         rewrited_message = channel_rewrite(line)
         @channels[channel_sym] << rewrited_message if @channels.has_key?(channel_sym)
