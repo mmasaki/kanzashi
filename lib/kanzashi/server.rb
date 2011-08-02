@@ -23,14 +23,14 @@ module Kanzashi
       Hook.call(:start)
       log.info("Server:start") {"Kanzashi starting..."}
 
-      @@servers = {}
+      @@networks = {}
       config.networks.each do |server_name, server|
         log.info("Server:connect") {"Connecting to #{server_name}..."}
         Hook.call(:connect, server_name)
         log.debug("Server:connect") {"#{server_name}: #{server}"}
 
         connection = EventMachine.connect(server.host, server.port, Client, server_name, server.encoding||"UTF-8", server.tls)
-        @@servers[server_name] = connection
+        @@networks[server_name] = connection
 
         connection.send_data "NICK #{config.user.nick}\r\n"
         connection.send_data "USER #{config.user.user||config.user.nick} 8 * :#{config.user.real}\r\n"
@@ -96,11 +96,11 @@ module Kanzashi
     def split_channel_and_server(channel)
       if /^:?((?:#|%|!).+)@(.+)/ =~ channel
         channel_name = $1
-        server = @@servers[$2.to_sym]
+        server = @@networks[$2.to_sym]
       end
       unless server # in cases where the user specifies invaild server
         channel_name = channel
-        server = @@servers.first[1] # the first connection of servers list
+        server = @@networks.first[1] # the first connection of servers list
       end
       [channel_name, server]
     end
