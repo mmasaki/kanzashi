@@ -56,7 +56,7 @@ module Kanzashi
         @auth = true
       end
       unless @auth # Without authentication, it is needed to refuse all message except PASS
-        Hook.call(:bad_password,self)
+        Hook.call(:bad_password, self)
         send_data "ERROR :Bad password?\r\n"
         close_connection(true) # close after writing
       end
@@ -67,7 +67,7 @@ module Kanzashi
       when "PONG"
         # do nothing
       when "USER"
-        Hook.call(:new_session,self)
+        Hook.call(:new_session, self)
         send_data "001 #{m[0]} welcome to Kanzashi.\r\n"
         @user[:username] = m[0].to_s
         @user[:realname] = m[3].to_s
@@ -79,7 +79,7 @@ module Kanzashi
           server.join(channel_name)
         end
       when "QUIT"
-        Hook.call(:quit,self)
+        Hook.call(:quit, self)
         send_data "ERROR :Closing Link.\r\n"
         close_connection(true) # close after writing
       else

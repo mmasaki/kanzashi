@@ -92,5 +92,8 @@ networks:
       Kanzashi::Config.config.config_file.should == "configa.yml"
 
     end
+
+    it "--make-password" do
+    end
   end
 end

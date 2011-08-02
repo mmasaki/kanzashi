@@ -67,6 +67,13 @@ module Kanzashi
         parser = OptionParser.new
         config_file = "config.yml"
 
+        parser.on('--make-password') do
+          print "Kanzashi encrypts your raw password to use it for config file.\n\n"
+          print "Please enter raw password: "
+          print "#{Digest::SHA256.hexdigest(STDIN.gets)} is your encoded password.\nUse this in your config files.\n"
+          exit
+        end
+
         parser.on('-c FILE','--config=FILE','specify config file') do |file|
           @@config[:config_file] = file
         end
