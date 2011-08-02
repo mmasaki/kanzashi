@@ -46,7 +46,7 @@ module Kanzashi
     def receive_line(line)
       m = Net::IRC::Message.parse(line)
       log.debug("Server:receive_line") {"Received line: #{line.chomp.inspect}"}
-      Hook.call(:receive_line,m,line.chomp)
+      Hook.call(:receive_line, m,line.chomp)
       if config.server.pass
         if m.command == "PASS" # authenticate
           @auth = (config.server.pass == Digest::SHA256.hexdigest(m[0].to_s) \
@@ -60,6 +60,7 @@ module Kanzashi
         send_data "ERROR :Bad password?\r\n"
         close_connection(true) # close after writing
       end
+      Hook.call(m.command.downcase.to_sym, m)
       case m.command
       when "NICK"
         @user[:nick] == m[0].to_s
