@@ -24,13 +24,17 @@ module Kanzashi
       log.info("Server:start") {"Kanzashi starting..."}
       @@servers = {}
       # connect to specified server
-      config.networks.each do |server_name, value|
+      config.networks.each do |server_name, server|
         log.info("Server:connect") {"Connecting to #{server_name}..."}
         Hook.call(:connect, server_name)
-        log.debug("Server:connect") {"#{server_name}: #{value}"}
-        connection = EventMachine::connect(value.host, value.port, Client, server_name, value.encoding||"UTF-8", value.tls)
+        log.debug("Server:connect") {"#{server_name}: #{server}"}
+
+        connection = EventMachine.connect(server.host, server.port, Client, server_name, server.encoding||"UTF-8", server.tls)
         @@servers[server_name] = connection
-        connection.send_data("NICK #{config.user.nick}\r\nUSER #{config.user.user||config.user.nick} 8 * :#{config.user.real}\r\n")
+
+        connection.send_data "NICK #{config.user.nick}\r\n"
+        connection.send_data "USER #{config.user.user||config.user.nick} 8 * :#{config.user.real}\r\n"
+
         Hook.call(:connected, server_name)
         log.info("Server:connect") {"Connected to #{server_name}."}
       end
