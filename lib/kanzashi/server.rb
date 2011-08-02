@@ -15,6 +15,7 @@ module Kanzashi
       if config.server.tls # enable TLS
         start_tls(config.server.tls.kind_of?(Hash) ? config.server.tls : {})
       end
+      puts EM.connection_count - @@networks.size
     end
 
     def self.start_and_connect
@@ -58,7 +59,7 @@ module Kanzashi
       unless @auth # Without authentication, it is needed to refuse all message except PASS
         Hook.call(:bad_password, self)
         send_data "ERROR :Bad password?\r\n"
-        close_connection(true) # close after writing
+        close_connection_after_writing
       end
       Hook.call(m.command.downcase.to_sym, m)
       case m.command
@@ -81,7 +82,7 @@ module Kanzashi
       when "QUIT"
         Hook.call(:quit, self)
         send_data "ERROR :Closing Link.\r\n"
-        close_connection(true) # close after writing
+        close_connection_after_writing
       else
         send_server(line)
       end
