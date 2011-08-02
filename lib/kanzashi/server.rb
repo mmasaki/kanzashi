@@ -71,6 +71,13 @@ module Kanzashi
         send_data "001 #{m[0]} welcome to Kanzashi.\r\n"
         @user[:username] = m[0].to_s
         @user[:realname] = m[3].to_s
+
+        @@networks.each do |name,client|
+          client.channels.each do |channel,v|
+            send_data ":#{@user[:username]} JOIN #{channel}#{config.separator}#{name}\r\n"
+            v.each {|l| send_data l }
+          end
+        end
       when "JOIN"
         channels = m[0].split(",")
         channels.each do |channel|
@@ -85,6 +92,11 @@ module Kanzashi
       else
         send_server(line)
       end
+    end
+
+    def send_data(data)
+      log.debug("Server:send_data"){data.inspect}
+      super data
     end
 
     def receive_data(data)

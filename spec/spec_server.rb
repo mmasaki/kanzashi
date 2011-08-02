@@ -71,7 +71,7 @@ server:
     @server.line "PASS hi"
     @server.line "NICK kanzashi"
     @server.line "USER kanzashi kanzashi kanzashi"
-    @server.datas[-1].should match(/^001/)
+    @server.datas.join.should match(/^001/)
   end
 
   it "says error when specified wrong password" do
@@ -96,7 +96,7 @@ server:
     @server.line "PASS hi"
     @server.line "NICK kanzashi"
     @server.line "USER kanzashi kanzashi kanzashi"
-    @server.datas[-1].should match(/^001/)
+    @server.datas.join.should match(/^001/)
   end
 
   it "doesn't require password when password is not specified in config" do
@@ -107,7 +107,7 @@ server:
 
     @server.line "NICK kanzashi"
     @server.line "USER kanzashi kanzashi kanzashi"
-    @server.datas[-1].should match(/^001/)
+    @server.datas.join.should match(/^001/)
   end
 
   it "pass messages to network" do
@@ -147,8 +147,15 @@ separator: "@"
     EOY
   end
 
-  it "joins when connected" do
+  it "sends JOIN command when connected to networks" do # TODO: spec_client.rb
     TestIRCd.class_variable_get(:"@@channels").has_key?("#hola").should be_true
     TestIRCd.class_variable_get(:"@@channels").has_key?("#tere").should be_true
+  end
+
+  it "sends JOIN command to client when connected to kanzashi" do
+    @server.line "NICK kanzashi"
+    @server.line "USER kanzashi kanzashi kanzashi"
+    @server.datas.join.should match(/#hola@local/)
+    @server.datas.join.should match(/#tere@local/)
   end
 end

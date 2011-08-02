@@ -4,8 +4,9 @@ module Kanzashi
     include Kanzashi
     class << self; include UtilMethod; end
 
-    include Kanzashi
     @@relay_to = [] # an array includes connections to relay
+
+    attr_reader :channels
 
     def initialize(server_name, encoding, use_tls=false)
       @server_name = server_name
@@ -91,6 +92,7 @@ module Kanzashi
     end
 
     def join(channel_name)
+      log.debug("Client #{@server_name}:join") { channel_name }
       channel_sym = channel_name.to_sym
       if @channels.has_key?(channel_sym) # cases that kanzashi already joined specifed channnel
         @channels[channel_sym].each {|line| relay(line) } # send cached who list
