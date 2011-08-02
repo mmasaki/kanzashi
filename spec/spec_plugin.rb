@@ -3,7 +3,7 @@ require_relative './helper'
 module Kanzashi
   class Plugin
     remove_const :PLUGINS_DIR
-    PLUGINS_DIR = File.expand_path("#{File.dirname(__FILE__)}/plugins")
+    PLUGINS_DIR = File.expand_path("#{File.dirname(__FILE__)}/plugins_for_spec")
   end
 end
 
