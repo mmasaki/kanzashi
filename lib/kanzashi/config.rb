@@ -3,6 +3,7 @@ module Kanzashi
     include Kanzashi
     DEFAULT = {
       config_file: "config.yml",
+      separator: "@",
       user: {
         nick: "kanzashi",
         user: "kanzashi",

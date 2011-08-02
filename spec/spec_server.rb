@@ -114,4 +114,26 @@ server:
     }
     a[1].should == "hi"
   end
+
+  it "network-separator is configruable" do
+    a = nil
+    Kh.make_space(:spec_server) do
+      Kh.server_privmsg {|m| a = m}
+    end
+    Kanzashi::Config.load_config <<-EOY
+separator: "-"
+    EOY
+    @server.line "NICK kanzashi"
+    @server.line "USER kanzashi kanzashi kanzashi"
+    @server.line "JOIN #hi-local"
+    @server.line "PRIVMSG #hi-local :hola"
+    timeout(3) {
+      nil until a
+    }
+    a[0].should == "#hi"
+    a[1].should == "hola"
+    Kanzashi::Config.load_config <<-EOY
+separator: "@"
+    EOY
+  end
 end

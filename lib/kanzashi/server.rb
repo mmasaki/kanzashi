@@ -94,7 +94,7 @@ module Kanzashi
     end
 
     def split_channel_and_server(channel)
-      if /^:?((?:#|%|!).+)@(.+)/ =~ channel
+      if /^:?((?:#|%|!).+)#{Regexp.escape(config.separator)}(.+)/ =~ channel
         channel_name = $1
         server = @@networks[$2.to_sym]
       end
