@@ -33,8 +33,7 @@ module Kanzashi
         connection = EventMachine.connect(server.host, server.port, Client, server_name, server.encoding||"UTF-8", server.tls)
         @@networks[server_name] = connection
 
-        connection.send_data "NICK #{config.user.nick}\r\n"
-        connection.send_data "USER #{config.user.user||config.user.nick} 8 * :#{config.user.real}\r\n"
+        connection.send_data "NICK #{config.user.nick}\r\nUSER #{config.user.user||config.user.nick} 8 * :#{config.user.real}\r\n"
 
         Hook.call(:connected, server_name)
         log.info("Server:connect") {"Connected to #{server_name}."}
@@ -126,6 +125,11 @@ module Kanzashi
           server.send_data("#{params.join(" ")}\r\n")
         end
       end
+    end
+
+    # if detached, call Hook.detached.
+    def unbind
+      Hook.call(:detached, server_name) if EM.connection_count == @@networks.size
     end
 
     def receive_from_server(data)
