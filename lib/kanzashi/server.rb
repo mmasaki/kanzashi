@@ -129,7 +129,7 @@ module Kanzashi
 
     # if detached, call Hook.detached.
     def unbind
-      Hook.call(:detached, server_name) if EM.connection_count == @@networks.size
+      Hook.call(:unbind)
     end
 
     def receive_from_server(data)
