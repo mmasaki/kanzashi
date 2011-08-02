@@ -3,19 +3,24 @@ module Kanzashi
   module Server
     include Kanzashi
     class << self; include UtilMethod; end
+    @@client_count = 0
+
+    def self.client_count 
+      @@client_count
+    end
 
     def initialize
       Client.add_connection(self)
       Hook.call(:new_connection,self)
       @buffer = BufferedTokenizer.new("\r\n")
       @user = {}
+      @@client_count += 1
     end
 
     def post_init
       if config.server.tls # enable TLS
         start_tls(config.server.tls.kind_of?(Hash) ? config.server.tls : {})
       end
-      puts EM.connection_count - @@networks.size
     end
 
     def self.start_and_connect
@@ -141,7 +146,9 @@ module Kanzashi
 
     # if detached, call Hook.detached.
     def unbind
-      Hook.call(:unbind)
+      @@client_count -= 1
+      Hook.call(:unbind, self)
+      Hook.call(:detached, self) if @@client_count.zero?
     end
 
     def receive_from_server(data)

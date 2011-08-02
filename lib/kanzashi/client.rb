@@ -54,9 +54,8 @@ module Kanzashi
       when "JOIN"
         channel_sym = m[0].to_s.to_sym
         @channels[channel_sym] = [] unless @channels.has_key?(channel_sym)
-#        relay(channel_rewrite(line))
       when "002"
-        config.networks[@server_name].join_to.each do |channel|
+        config.networks[@server_name].join_to.each do |channel| # join to channel specifed in config file
           # TODO: should use String#prepend
           channel = "##{channel}" unless /^#/ =~ channel
           join(channel)

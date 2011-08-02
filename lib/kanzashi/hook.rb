@@ -36,7 +36,7 @@ module Kanzashi
       end
 
       def call_(type,args,namespace=nil)
-        #log.debug("Hook:call") {"#{type}(#{args.inspect}) @ #{namespace||"global"}"}
+        # log.debug("Hook:call") {"#{type}(#{args.inspect}) @ #{namespace||"global"}"}
         @@hooks.each do |name, space|
           next if !namespace.nil? && name != namespace
           space.each do |t, hooks|
