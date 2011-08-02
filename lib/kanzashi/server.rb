@@ -18,12 +18,12 @@ module Kanzashi
     end
 
     def self.start_and_connect
-      # load plugins
       Plugin.plug_all
+
       Hook.call(:start)
       log.info("Server:start") {"Kanzashi starting..."}
+
       @@servers = {}
-      # connect to specified server
       config.networks.each do |server_name, server|
         log.info("Server:connect") {"Connecting to #{server_name}..."}
         Hook.call(:connect, server_name)
@@ -38,6 +38,7 @@ module Kanzashi
         Hook.call(:connected, server_name)
         log.info("Server:connect") {"Connected to #{server_name}."}
       end
+
       log.info("Server:start") {"Kanzashi started."}
       Hook.call(:started)
     end
