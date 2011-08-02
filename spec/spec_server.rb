@@ -29,11 +29,18 @@ describe Kanzashi::Server do
         host: localhost
         port: #{TestIRCd.port}
         encoding: UTF-8
+        join_to:
+          - hola
+          - "#tere"
     EOY
     a = false
+    b = false
+    c = false
     Kh.started { a = true }
+    Kh.server_connect { b = true }
+    Kh.client_welcome { c = true }
     th = Thread.new { EM.run { Kanzashi::Server.start_and_connect } }
-    nil until a
+    nil until a && b && c
   end
 
   th = nil
@@ -47,6 +54,9 @@ describe Kanzashi::Server do
         host: localhost
         port: #{TestIRCd.port}
         encoding: UTF-8
+        join_to:
+          - hola
+          - "#tere"
     EOY
 
     #th ||= Thread.new { Kanzashi::Server.start_and_connect }
@@ -135,5 +145,10 @@ separator: "-"
     Kanzashi::Config.load_config <<-EOY
 separator: "@"
     EOY
+  end
+
+  it "joins when connected" do
+    TestIRCd.class_variable_get(:"@@channels").has_key?("#hola").should be_true
+    TestIRCd.class_variable_get(:"@@channels").has_key?("#tere").should be_true
   end
 end

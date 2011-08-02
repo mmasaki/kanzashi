@@ -54,6 +54,14 @@ module Kanzashi
         channel_sym = m[0].to_s.to_sym
         @channels[channel_sym] = [] unless @channels.has_key?(channel_sym)
 #        relay(channel_rewrite(line))
+      when "002"
+        config.networks[@server_name].join_to.each do |channel|
+          # TODO: should use String#prepend
+          channel = "##{channel}" unless /^#/ =~ channel
+          send_data "JOIN #{channel}\r\n"
+          sleep 0.2
+        end
+        Kh.call(:client_welcome, self)
       when "332", "333", "366"
         channel_sym = m[1].to_s.to_sym
         rewrited_message = channel_rewrite(line)
