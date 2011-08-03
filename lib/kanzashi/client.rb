@@ -6,7 +6,7 @@ module Kanzashi
 
     @@relay_to = [] # an array includes connections to relay
 
-    attr_reader :channels
+    attr_reader :channels, :nick
 
     def initialize(server_name, encoding, use_tls=false)
       @server_name = server_name
@@ -14,6 +14,7 @@ module Kanzashi
       @channels = {}
       @buffer = BufferedTokenizer.new("\r\n")
       @use_tls = use_tls
+      @nick = config.user.nick
     end
 
     def inspect
@@ -53,12 +54,11 @@ module Kanzashi
       when "JOIN"
         channel_sym = m[0].to_s.to_sym
         /^(.+?)(!.+?)?(@.+?)?$/ =~ m.prefix
-        nick = $1
-        p nick, config.user.nick
-        if nick == config.user.nick
+        nic = $1
+        if nic == @nick
           @channels[channel_sym] = { :cache => {}, :names => [] } unless @channels.has_key?(channel_sym)
         else
-          @channels[channel_sym][:names] << nick
+          @channels[channel_sym][:names] << nic
           relay(channel_rewrite(line))
         end
       when "002"
@@ -112,6 +112,12 @@ module Kanzashi
       log.debug("Client #{@server_name}:send_data") { data.inspect }
       data.encode!(@encoding, Encoding::UTF_8, {:invalid => :replace})
       super
+    end
+
+    def nick=(new_nick)
+      log.debug("Client #{@server_name}:change_nick") { new_nick.inspect }
+      send_data "NICK #{new_nick}\r\n"
+      @nick = new_nick
     end
   end
 end

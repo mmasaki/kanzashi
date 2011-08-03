@@ -1,5 +1,7 @@
 Kh.detached do
-  K::Server.send_to_all("NICK #{K.config.plugins.detached_nick.nick_on_detached}\r\n")
+  K::Server.networks.each do |name,client|
+    client.nick = K.config.plugins.detached_nick.nick_on_detached
+  end
 end
 
 Kh.attached do

@@ -5,6 +5,8 @@ module Kanzashi
     class << self; include UtilMethod; end
     @@client_count = 0
 
+    def self.networks; @@networks; end
+
     # return the count of connections from IRC clients
     def self.client_count 
       @@client_count
