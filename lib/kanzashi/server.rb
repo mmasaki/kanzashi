@@ -35,7 +35,6 @@ module Kanzashi
       Plugin.plug_all
 
       Hook.call(:start)
-      Hook.call(:detached, nil)
       log.info("Server:start") {"Kanzashi starting..."}
 
       @@networks = {}
@@ -55,6 +54,7 @@ module Kanzashi
 
       log.info("Server:start") {"Kanzashi started."}
       Hook.call(:started)
+      Hook.call(:detached, nil)
     end
 
     def receive_line(line)
