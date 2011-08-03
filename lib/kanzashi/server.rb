@@ -5,8 +5,16 @@ module Kanzashi
     class << self; include UtilMethod; end
     @@client_count = 0
 
+    # return the count of connections from IRC clients
     def self.client_count 
       @@client_count
+    end
+
+    # send data to all IRC servers
+    def self.send_to_all(data)
+      @@networks.each_value do |server|
+        server.send_data(data)
+      end
     end
 
     def initialize
