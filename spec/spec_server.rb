@@ -20,7 +20,7 @@ class MocKanzashi
   end
 
   def close_connection_after_writing
-    Kanzashi::Hook.call(:mock_close, a)
+    Kanzashi::Hook.call(:mock_close, true)
   end
 end
 
