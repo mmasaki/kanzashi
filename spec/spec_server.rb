@@ -18,6 +18,10 @@ class MocKanzashi
   def line(l)
     receive_line(l+"\r\n")
   end
+
+  def close_connection_after_writing
+    Kanzashi::Hook.call(:mock_close, a)
+  end
 end
 
 describe Kanzashi::Server do
