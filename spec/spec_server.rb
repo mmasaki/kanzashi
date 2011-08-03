@@ -162,4 +162,10 @@ separator: "@"
     @server.datas.join.should match(/#hola@local/)
     @server.datas.join.should match(/#tere@local/)
   end
+
+  it "sends NICK commend when client specified nick is not equal to nick in config" do
+    @server.line "NICK kanzashii"
+    @server.line "USER kanzashi kanzashi kanzashi"
+    @server.datas.join.should match(/^:kanzashii!~kanzashi@localhost NICK kanzashi/)
+  end
 end
