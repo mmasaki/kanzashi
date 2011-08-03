@@ -68,7 +68,7 @@ module Kanzashi
       Hook.call(m.command.downcase.to_sym, m)
       case m.command
       when "NICK"
-        @user[:nick] == m[0].to_s
+        @user[:nick] = m[0].to_s
       when "PONG"
         # do nothing
       when "USER"
@@ -76,17 +76,18 @@ module Kanzashi
         send_data "001 #{m[0]} welcome to Kanzashi.\r\n"
         @user[:username] = m[0].to_s
         @user[:realname] = m[3].to_s
+        @user[:prefix] = "#{@user[:nick]}!~#{@user[:username]}@localhost"
 
         @@networks.each do |name,client|
           client.channels.each do |channel,v|
-            send_data ":#{@user[:username]} JOIN #{channel}#{config.separator}#{name}\r\n"
+            send_data ":#{@user[:prefix]} JOIN #{channel}#{config.separator}#{name}\r\n"
             v[:cache].each {|l| send_data l }
           end
         end
       when "JOIN"
         channels = m[0].split(",")
         channels.each do |channel|
-          send_data ":#{@user[:username]} JOIN #{channel}\r\n"
+          send_data ":#{@user[:prefix]} JOIN #{channel}\r\n"
           channel_name, server = split_channel_and_server(channel)
           server.join(channel_name)
         end
