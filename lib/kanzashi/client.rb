@@ -61,8 +61,6 @@ module Kanzashi
           @channels[channel_sym][:names] << nick
           relay(channel_rewrite(line))
         end
-      when "PART"
-        p "PART"
       when "002"
         config.networks[@server_name].join_to.each do |channel| # join to channel specifed in config file
           # TODO: should use String#prepend

@@ -95,8 +95,8 @@ module Kanzashi
       when "JOIN"
         channels = m[0].split(",")
         channels.each do |channel|
-#          send_data ":#{@user[:prefix]} JOIN #{channel}\r\n" # in this case, i couldn't join channels with LimeChat
-          send_data ":#{@user[:username]} JOIN #{channel}\r\n"
+          send_data ":#{@user[:prefix]} JOIN #{channel}\r\n" # in this case, i couldn't join channels with LimeChat
+#          send_data ":#{@user[:username]} JOIN #{channel}\r\n"
           channel_name, server = split_channel_and_server(channel)
           server.join(channel_name)
         end
