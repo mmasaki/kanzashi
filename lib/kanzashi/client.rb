@@ -47,13 +47,19 @@ module Kanzashi
     def receive_line(line)
       m = Net::IRC::Message.parse(line)
       line.encode!(Encoding::UTF_8, @encoding, {:invalid => :replace})
-      Hook.call(m.command.downcase.to_sym, m)
       case m.command
       when "PING"
         send_data "PONG #{config.user.nick}\r\n" # reply to ping
       when "JOIN"
         channel_sym = m[0].to_s.to_sym
-        @channels[channel_sym] = { :cache => {} } unless @channels.has_key?(channel_sym)
+        /^(.+?)(!.+?)?(@.+?)?$/ =~ m.prefix
+        nick = $1
+        if nick == config.user.nick
+          @channels[channel_sym] = { :cache => {} } unless @channels.has_key?(channel_sym)
+        else
+          @channels[channel_sym][:names] << nick
+          relay(channel_rewrite(line))
+        end
       when "002"
         config.networks[@server_name].join_to.each do |channel| # join to channel specifed in config file
           # TODO: should use String#prepend
@@ -71,6 +77,7 @@ module Kanzashi
         channel_sym = m[2].to_s.to_sym
         rewrited_message = channel_rewrite(line)
         @channels[channel_sym][:cache]["353".to_sym] = rewrited_message if @channels.has_key?(channel_sym)
+        @channels[channel_sym][:names] = m[3].to_s.split
         relay(rewrited_message)
       else
         log.debug("Client #{@server_name}:recv") { line.inspect }
