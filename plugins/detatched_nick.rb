@@ -3,7 +3,7 @@ Kh.detached do
   @detached = true
 end
 
-Kh.new_connection do
+Kh.new_session do
   if @detached
     K::Server.send_to_all("NICK #{K.config.user.nick}\r\n")
     @detached = false
