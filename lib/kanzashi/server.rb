@@ -81,7 +81,7 @@ module Kanzashi
         @@networks.each do |name,client|
           client.channels.each do |channel,v|
             send_data ":#{@user[:prefix]} JOIN #{channel}#{config.separator}#{name}\r\n"
-            v[:cache].each {|l| send_data l }
+            v[:cache].each {|k,l| send_data(l.chomp << "\r\n")}
           end
         end
       when "JOIN"
