@@ -75,7 +75,7 @@ server:
     @server.line "PASS hi"
     @server.line "NICK kanzashi"
     @server.line "USER kanzashi kanzashi kanzashi"
-    @server.datas.join.should match(/^001/)
+    @server.datas.join.should match(/^:localhost 001/)
   end
 
   it "says error when specified wrong password" do
@@ -100,7 +100,7 @@ server:
     @server.line "PASS hi"
     @server.line "NICK kanzashi"
     @server.line "USER kanzashi kanzashi kanzashi"
-    @server.datas.join.should match(/^001/)
+    @server.datas.join.should match(/^:localhost 001/)
   end
 
   it "doesn't require password when password is not specified in config" do
@@ -111,7 +111,7 @@ server:
 
     @server.line "NICK kanzashi"
     @server.line "USER kanzashi kanzashi kanzashi"
-    @server.datas.join.should match(/^001/)
+    @server.datas.join.should match(/^:localhost 001/)
   end
 
   it "pass messages to network" do
@@ -177,7 +177,7 @@ server:
     @server.line "PASS hi"
     @server.line "NICK kanzashi"
     @server.line "USER kanzashi kanzashi kanzashi"
-    @server.datas.join.should match(/^001 kanzashi :Welcome to the Internet Relay Network kanzashi!kanzashi@localhost/)
+    @server.datas.join.should match(/^:localhost 001 kanzashi :Welcome to the Internet Relay Network kanzashi!kanzashi@localhost/)
   end
 
 
