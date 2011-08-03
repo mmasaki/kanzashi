@@ -53,7 +53,7 @@ module Kanzashi
         send_data "PONG #{config.user.nick}\r\n" # reply to ping
       when "JOIN"
         channel_sym = m[0].to_s.to_sym
-        @channels[channel_sym] = [] unless @channels.has_key?(channel_sym)
+        @channels[channel_sym] = { :cache => {} } unless @channels.has_key?(channel_sym)
       when "002"
         config.networks[@server_name].join_to.each do |channel| # join to channel specifed in config file
           # TODO: should use String#prepend
@@ -65,12 +65,12 @@ module Kanzashi
       when "332", "333", "366" # TODO: Able to refact
         channel_sym = m[1].to_s.to_sym
         rewrited_message = channel_rewrite(line)
-        @channels[channel_sym] << rewrited_message if @channels.has_key?(channel_sym)
+        @channels[channel_sym][:cache][m.command.to_sym] = rewrited_message if @channels.has_key?(channel_sym)
         relay(rewrited_message)
       when "353"
         channel_sym = m[2].to_s.to_sym
         rewrited_message = channel_rewrite(line)
-        @channels[channel_sym] << rewrited_message if @channels.has_key?(channel_sym)
+        @channels[channel_sym][:cache]["353".to_sym] = rewrited_message if @channels.has_key?(channel_sym)
         relay(rewrited_message)
       else
         log.debug("Client #{@server_name}:recv") { line.inspect }
@@ -94,7 +94,7 @@ module Kanzashi
       log.debug("Client #{@server_name}:join") { channel_name }
       channel_sym = channel_name.to_sym
       if @channels.has_key?(channel_sym) # cases that kanzashi already joined specifed channnel
-        @channels[channel_sym].each {|line| relay(line) } # send cached who list
+        @channels[channel_sym][:cache].each_value {|line| relay(line) } # send cached who list
       else # cases that kanzashi hasn't joined specifed channnel yet
         send_data("JOIN #{channel_name}\r\n")
       end
