@@ -78,7 +78,7 @@ module Kanzashi
         @user[:realname] = m[3].to_s
         @user[:prefix] = "#{@user[:nick]}!#{@user[:username]}@localhost"
 
-        send_data "001 #{m[0]} welcome to Kanzashi. #{@user[:prefix]}\r\n"
+        send_data "001 #{m[0]} :Welcome to the Internet Relay Network #{@user[:prefix]}\r\n"
 
         unless @user[:nick] == config.user.nick
           send_data ":#{@user[:prefix]} NICK #{config.user.nick}\r\n"

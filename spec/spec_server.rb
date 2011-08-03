@@ -177,7 +177,7 @@ server:
     @server.line "PASS hi"
     @server.line "NICK kanzashi"
     @server.line "USER kanzashi kanzashi kanzashi"
-    @server.datas.join.should match(/^001 .+ kanzashi!kanzashi@localhost/)
+    @server.datas.join.should match(/^001 kanzashi :Welcome to the Internet Relay Network kanzashi!kanzashi@localhost/)
   end
 
 
