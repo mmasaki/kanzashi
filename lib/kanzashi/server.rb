@@ -81,6 +81,7 @@ module Kanzashi
         # do nothing
       when "USER"
         Hook.call(:new_session, self)
+        Hook.call(:attached) if @@client_count == 1
 
         @user[:username] = m[0].to_s
         @user[:realname] = m[3].to_s
