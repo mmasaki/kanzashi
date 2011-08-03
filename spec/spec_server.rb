@@ -166,6 +166,19 @@ separator: "@"
   it "sends NICK commend when client specified nick is not equal to nick in config" do
     @server.line "NICK kanzashii"
     @server.line "USER kanzashi kanzashi kanzashi"
-    @server.datas.join.should match(/^:kanzashii!~kanzashi@localhost NICK kanzashi/)
+    @server.datas.join.should match(/^:kanzashii!kanzashi@localhost NICK kanzashi/)
   end
+
+  it "sends RPL_WELCOME with prefix" do
+    Kanzashi::Config.load_config <<-EOY
+server:
+  pass: hi
+    EOY
+    @server.line "PASS hi"
+    @server.line "NICK kanzashi"
+    @server.line "USER kanzashi kanzashi kanzashi"
+    @server.datas.join.should match(/^001 .+ kanzashi!kanzashi@localhost/)
+  end
+
+
 end

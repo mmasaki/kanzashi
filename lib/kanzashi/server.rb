@@ -73,16 +73,17 @@ module Kanzashi
         # do nothing
       when "USER"
         Hook.call(:new_session, self)
-        send_data "001 #{m[0]} welcome to Kanzashi.\r\n"
+
         @user[:username] = m[0].to_s
         @user[:realname] = m[3].to_s
+        @user[:prefix] = "#{@user[:nick]}!#{@user[:username]}@localhost"
 
-        @user[:prefix] = "#{@user[:nick]}!~#{@user[:username]}@localhost"
+        send_data "001 #{m[0]} welcome to Kanzashi. #{@user[:prefix]}\r\n"
 
         unless @user[:nick] == config.user.nick
           send_data ":#{@user[:prefix]} NICK #{config.user.nick}\r\n"
           @user[:nick] = config.user.nick
-          @user[:prefix] = "#{@user[:nick]}!~#{@user[:username]}@localhost"
+          @user[:prefix] = "#{@user[:nick]}!#{@user[:username]}@localhost"
         end
 
         @@networks.each do |name,client|
