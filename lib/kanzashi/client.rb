@@ -56,7 +56,7 @@ module Kanzashi
         nick = $1
         p nick, config.user.nick
         if nick == config.user.nick
-          @channels[channel_sym] = { :cache => {} } unless @channels.has_key?(channel_sym)
+          @channels[channel_sym] = { :cache => {}, :names => [] } unless @channels.has_key?(channel_sym)
         else
           @channels[channel_sym][:names] << nick
           relay(channel_rewrite(line))
