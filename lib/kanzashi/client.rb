@@ -34,7 +34,7 @@ module Kanzashi
     def channel_rewrite(line)
       params = line.split
       params.each do |param|
-        if /^:?(#|%|!)/ =~ param
+        if /^:?(#|&)/ =~ param
           channels = param.split(",")
           channels.map! { |channel| "#{channel}#{config.separator}#{@server_name}" }
           param.replace(channels.join(","))
