@@ -32,12 +32,12 @@ networks:
   #   tls: true
 
 plugins:
-  detatched_nick: # Change nickname when any client isn't connected (detatched).
+  detached_nick: # Change nickname when any client isn't connected (detached).
     enabled: false
-    nick_on_detatched: kanzashi_off # nick when detatched
-  detatched_away: # Set AWAY when any client isn't connected (detatched).
+    nick_on_detached: kanzashi_off # nick when detached
+  detached_away: # Set AWAY when any client isn't connected (detached).
     enabled: false
-    message: "sleeping" # away message will set when detatched
+    message: "sleeping" # away message will set when detached
 
 
 
