@@ -6,7 +6,7 @@ module Kanzashi
 
     @@relay_to = [] # an array includes connections to relay
 
-    attr_reader :channels, :nick
+    attr_reader :channels, :nick, :server_name
 
     def initialize(server_name, encoding, use_tls=false)
       @server_name = server_name

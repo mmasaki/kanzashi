@@ -65,11 +65,9 @@ module Kanzashi
       m = Net::IRC::Message.parse(line)
       log.debug("Server:receive_line") {"Received line: #{line.chomp.inspect}"}
       Hook.call(:receive_line, m,line.chomp)
-      if config.server.pass
-        if m.command == "PASS" # authenticate
-          @auth = (config.server.pass == Digest::SHA256.hexdigest(m[0].to_s) \
-                || config.server.pass == m[0].to_s)
-        end
+      if config.server.pass && m.command == "PASS" # authenticate
+        @auth = (config.server.pass == Digest::SHA256.hexdigest(m[0].to_s) \
+              || config.server.pass == m[0].to_s)
       else # the case where the user has not specified password
         @auth = true
       end
