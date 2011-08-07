@@ -7,6 +7,8 @@ module Kanzashi
 
     def self.networks; @@networks; end
 
+    attr_reader :user
+
     # return the count of connections from IRC clients
     def self.client_count 
       @@client_count
@@ -76,9 +78,10 @@ module Kanzashi
         send_data "ERROR :Bad password?\r\n"
         close_connection_after_writing
       end
-      Hook.call(m.command.downcase.to_sym, m)
+      Hook.call(m.command.downcase.to_sym, m, self)
       case m.command
       when "NICK"
+        @@networks.each_value {|n| n.nick = m[0].to_s } if @user[:nick]
         @user[:nick] = m[0].to_s
       when "PONG"
         # do nothing

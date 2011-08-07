@@ -49,6 +49,11 @@ module Kanzashi
     def log
       Log.logger
     end
+
+    def self.parse_prefix(prefix)
+      /^(.+?)!(.+?)?@(.+?)?$/ =~ prefix
+      [$1, $2, $3] 
+    end
   end
 
   class Log
