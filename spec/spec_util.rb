@@ -47,4 +47,20 @@ describe Kanzashi::Util do
       end
     end
   end
+
+  describe Kanzashi do
+    describe ".c" do
+      it "returns configration of plugin" do
+        Kanzashi::Config.load_config <<-EOF
+plugins:
+  haruharu:
+    enabled: false
+    hi: hola
+        EOF
+        Kh.make_space(:haruharu) do
+          K.c.hi.should == "hola"
+        end
+      end
+    end
+  end
 end
