@@ -68,6 +68,13 @@ module Kanzashi
   end
 
   include UtilMethod
-  class << self; include UtilMethod; end
+  class << self
+    include UtilMethod
+    def c
+      namespace = caller.any?{|x| /in `make_space'/ =~ x && x.start_with?(Kanzashi::Hook::FILE) } ? \
+        Kanzashi::Hook.namespace : :global
+      config.plugins[namespace]
+    end
+  end
 end
 

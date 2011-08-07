@@ -3,9 +3,14 @@ module Kanzashi
     @@lock = Mutex.new
     @@namespace = :global
     @@hooks = {}
+    FILE = __FILE__
     class << self
       include Kanzashi
       include UtilMethod
+
+      def namespace
+        @@namespace
+      end
 
       def make_space(name)
         raise ArgumentError, "can't make :global" if name == :global
