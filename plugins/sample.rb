@@ -1,3 +1,4 @@
+p [:plugin_sample, :config, K.c]
 Kh.start {|*a| p [:plugin_sample, :start, a] }
 Kh.connect {|*a| p [:plugin_sample, :connect, a] }
 Kh.connected {|*a| p [:plugin_sample, :connected, a] }
