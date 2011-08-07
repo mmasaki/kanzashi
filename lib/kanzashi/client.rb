@@ -47,6 +47,7 @@ module Kanzashi
 
     def receive_line(line)
       m = Net::IRC::Message.parse(line)
+      Hook.call(m.command.downcase.to_sym, m)
       line.encode!(Encoding::UTF_8, @encoding, {:invalid => :replace})
       case m.command
       when "PING"
