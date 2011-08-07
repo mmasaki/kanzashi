@@ -49,7 +49,7 @@ describe Kanzashi::Util do
   end
 
   describe Kanzashi::UtilMethod do
-    describe "parse_prefix" do
+    describe ".parse_prefix" do
       it "return nick, user, host" do
         Kanzashi::UtilMethod.parse_prefix("nick!user@host").should == ["nick", "user", "host"]
       end
