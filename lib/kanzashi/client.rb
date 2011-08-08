@@ -33,7 +33,12 @@ module Kanzashi
 
     # rewrite channel names for Kanzashi clients
     def channel_rewrite(line)
-      params = line.split
+      begin
+        params = line.split
+      rescue ArgumentError
+        line += "" # to avoid invalid byte sequence in UTF-8
+        retry
+      end
       params.each do |param|
         if /^:?(#|&)/ =~ param
           channels = param.split(",")
@@ -46,9 +51,10 @@ module Kanzashi
     end
 
     def receive_line(line)
-      m = Net::IRC::Message.parse(line)
-      Hook.call(m.command.downcase.to_sym, m, self)
       line.encode!(Encoding::UTF_8, @encoding, {:invalid => :replace})
+      m = Net::IRC::Message.parse(line.force_encoding(Encoding::ASCII_8BIT)) # force_encoding to match with byte sequence in Net::IRC::Message.parse
+      line.force_encoding(Encoding::UTF_8)
+      Hook.call(m.command.downcase.to_sym, m, self)
       case m.command
       when "PING"
         send_data "PONG #{config.user.nick}\r\n" # reply to ping

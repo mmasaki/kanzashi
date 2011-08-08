@@ -51,7 +51,7 @@ module Kanzashi
     end
 
     def self.parse_prefix(prefix)
-      /^(.+?)!(.+?)?@(.+?)?$/ =~ prefix
+      /^(.+?)(?:!(.+?))?(?:@(.+?))?$/ =~ prefix
       [$1, $2, $3]
     end
   end
