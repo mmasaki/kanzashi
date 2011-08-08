@@ -77,9 +77,20 @@ module Kanzashi
     include UtilMethod
     def c
       namespace = caller.any?{|x| /in `make_space'/ =~ x && x.start_with?(Kanzashi::Hook::FILE) } ? \
-        Kanzashi::Hook.namespace : :global
+        Kanzashi::Hook.namespace : nil
+      namespace = nil if namespace == :global
+
+      unless namespace
+        a = false
+        begin
+          namespace = caller.reverse.map{|x| x.match(
+            /#{Regexp.escape(Kanzashi::Plugin::PLUGINS_DIR)}\/(.+).rb:\d+:in `.+'/
+          ) }.compact[0][1].to_sym
+        rescue NoMethodError; end
+      end
+      namespace = :global unless namespace
+
       config.plugins[namespace]
-      p namespace
     end
   end
 end
