@@ -37,6 +37,7 @@ module Kanzashi
         params = line.split
       rescue ArgumentError
         line += "" # to avoid invalid byte sequence in UTF-8
+        p "Error."
         retry
       end
       params.each do |param|
@@ -52,7 +53,8 @@ module Kanzashi
 
     def receive_line(line)
       line.encode!(Encoding::UTF_8, @encoding, {:invalid => :replace})
-      m = Net::IRC::Message.parse(line.force_encoding(Encoding::ASCII_8BIT)) # force_encoding to match with byte sequence in Net::IRC::Message.parse
+      line.force_encoding(Encoding::ASCII_8BIT) # force_encoding to match with byte sequence in Net::IRC::Message.parse
+      m = Net::IRC::Message.parse(line) rescue return
       line.force_encoding(Encoding::UTF_8)
       Hook.call(m.command.downcase.to_sym, m, self)
       case m.command

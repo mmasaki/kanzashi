@@ -79,6 +79,7 @@ module Kanzashi
       namespace = caller.any?{|x| /in `make_space'/ =~ x && x.start_with?(Kanzashi::Hook::FILE) } ? \
         Kanzashi::Hook.namespace : :global
       config.plugins[namespace]
+      p namespace
     end
   end
 end
