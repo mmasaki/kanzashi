@@ -35,10 +35,8 @@ module Kanzashi
     def channel_rewrite(line)
       begin
         params = line.split
-      rescue ArgumentError
-        line += "" # to avoid invalid byte sequence in UTF-8
-        p "Error."
-        retry
+      rescue ArgumentError => ex
+        puts ex.message
       end
       params.each do |param|
         if /^:?(#|&)/ =~ param
@@ -52,9 +50,13 @@ module Kanzashi
     end
 
     def receive_line(line)
-      line.encode!(Encoding::UTF_8, @encoding, {:invalid => :replace})
-      line.force_encoding(Encoding::ASCII_8BIT) # force_encoding to match with byte sequence in Net::IRC::Message.parse
-      m = Net::IRC::Message.parse(line) rescue return
+      line.encode!(Encoding::UTF_8, @encoding, {:invalid => :replace}).force_encoding(Encoding::ASCII_8BIT)
+      begin
+        m = Net::IRC::Message.parse(line)
+      rescue Net::IRC::Message::InvalidMessage => ex
+        puts ex.message
+        return
+      end
       line.force_encoding(Encoding::UTF_8)
       Hook.call(m.command.downcase.to_sym, m, self)
       case m.command
@@ -89,6 +91,10 @@ module Kanzashi
         @channels[channel_sym][:cache]["353".to_sym] = rewrited_message
         @channels[channel_sym][:names] = m[3].to_s.split # make names list
         relay(rewrited_message)
+      when "PRIVMSG", "NOTICE"
+        p line unless m.ctcp?
+        log.debug("Client #{@server_name}:recv") { line.inspect }
+        relay(channel_rewrite(line)) unless m.ctcp?
       else
         log.debug("Client #{@server_name}:recv") { line.inspect }
         relay(channel_rewrite(line))

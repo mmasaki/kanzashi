@@ -14,6 +14,7 @@ require_relative "kanzashi/client"
 require_relative "kanzashi/config"
 require_relative "kanzashi/server"
 require_relative "kanzashi/plugin"
+require_relative "kanzashi/patches"
 
 K = Kanzashi
 Kh = Kanzashi::Hook
