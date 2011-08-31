@@ -67,19 +67,19 @@ module Kanzashi
         /^(.+?)(!.+?)?(@.+?)?$/ =~ m.prefix
         nic = $1
         if nic == @nick
-          @channels[channel_sym] = { :cache => {} } unless @channels.has_key?(channel_sym)
+          @channels[channel_sym] = { :cache => {}, :names => [] } unless @channels.has_key?(channel_sym)
         else
-          if @channels[channel_sym].has_key?(:names)
-            @channels[channel_sym][:names] << nic
-          else
-            @channels[channel_sym][:names] = [nic]
-          end
+          @channels[channel_sym][:names] << nic
           relay(channel_rewrite(line))
         end
+      when "NICK"
+        nick, = K::UtilMethod.parse_prefix(m.prefix)
+        @nick = m[0].to_s if nick == @nick
+        relay(channel_rewrite(line))
       when "002"
         config.networks[@server_name].join_to.each do |channel| # join to channel specifed in config file
           # TODO: should use String#prepend
-          channel = "##{channel}" unless /^#/ =~ channel
+          channel.replace("##{channel}") unless /^#/ =~ channel
           join(channel)
           sleep 0.2
         end
@@ -96,7 +96,6 @@ module Kanzashi
         @channels[channel_sym][:names] = m[3].to_s.split # make names list
         relay(rewrited_message)
       when "PRIVMSG", "NOTICE"
-        p line unless m.ctcp?
         log.debug("Client #{@server_name}:recv") { line.inspect }
         relay(channel_rewrite(line)) unless m.ctcp?
       else
@@ -136,7 +135,6 @@ module Kanzashi
     def nick=(new_nick)
       log.debug("Client #{@server_name}:change_nick") { new_nick.inspect }
       send_data "NICK #{new_nick}\r\n"
-      @nick = new_nick
     end
   end
 end
