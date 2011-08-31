@@ -38,8 +38,10 @@ plugins:
   detached_away: # Set AWAY when any client isn't connected (detached).
     enabled: false
     message: "sleeping" # away message will set when detached
+  join_when_invited: # join specified channel when invited
+    enabled: false
   log:
-    enabled: true
+    enabled: false
     # whether or not to keep log files open
     keep-file-open: true
     # directory to record logs

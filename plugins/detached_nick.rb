@@ -1,6 +1,9 @@
 Kh.detached do
-  K::Server.networks.each do |name,client|
-    client.nick = K.config.plugins.detached_nick.nick_on_detached
+  nick_on_detached = K.config.plugins.detached_nick.nick_on_detached
+  if nick_on_detached && nick_on_detached.kind_of?(String)
+    K::Server.networks.each do |name,client|
+      client.nick = K.config.plugins.detached_nick.nick_on_detached
+    end
   end
 end
 

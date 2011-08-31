@@ -79,6 +79,7 @@ module Kanzashi
       Hook.call(m.command.downcase.to_sym, m, self)
       case m.command
       when "NICK"
+        p m
         @@networks.each_value {|n| n.nick = m[0].to_s } if @user[:nick]
         @user[:nick] = m[0].to_s
       when "PONG"

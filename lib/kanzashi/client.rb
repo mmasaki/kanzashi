@@ -67,9 +67,13 @@ module Kanzashi
         /^(.+?)(!.+?)?(@.+?)?$/ =~ m.prefix
         nic = $1
         if nic == @nick
-          @channels[channel_sym] = { :cache => {}, :names => [] } unless @channels.has_key?(channel_sym)
+          @channels[channel_sym] = { :cache => {} } unless @channels.has_key?(channel_sym)
         else
-          @channels[channel_sym][:names] << nic
+          if @channels[channel_sym].has_key?(:names)
+            @channels[channel_sym][:names] << nic
+          else
+            @channels[channel_sym][:names] = [nic]
+          end
           relay(channel_rewrite(line))
         end
       when "002"

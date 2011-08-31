@@ -96,7 +96,6 @@ Kh.mode do |m, module_|
 end
 
 Kh.privmsg do |m, module_|
-  p K.c
   if @log.record?(:privmsg) && !m.ctcp?
     nick, = K::UtilMethod.parse_prefix(m.prefix)
     if module_.kind_of?(K::Client) # from others
