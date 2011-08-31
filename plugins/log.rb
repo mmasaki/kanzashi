@@ -7,28 +7,28 @@ class Kanzashi::Plugin::Log
     @filename = K.c[:filename] || "%Y.%m.%d.txt" 
     @mode = K.c[:mode] || 0600
     @dir_mode = K.c[:dir_mode] || 0700
-    @persistent = K.c[:persistent]
-    @logfiles = {} if @persistent
+    @keep_file_open = K.c[:keep_file_open]
+    @logfiles = {} if @keep_file_open
     @command = K.c[:command].split(",")
     @command.map!{|x| x.to_sym }
     @distinguish_myself = @distinguish_myself.nil? || K.c[:distinguish_myself]
+    @channel = Regexp.new(K.c[:channel]) if K.c[:channel]
 
     Dir.mkdir(@directory, @dir_mode) unless File.directory?(@directory)
   end  
 
-  attr_reader :persistent, :distinguish_myself
+  attr_reader :keep_file_open, :distinguish_myself
 
   def puts(str, dst)
-    str.replace("#{Time.now.strftime(K.c[:header])} #{str}")
-    STDOUT.puts(str)
-    if @persistent
-      p dst
-      p @logfiles
-      p @logfiles[dst.to_sym]
-      @logfiles[dst.to_sym].puts(str)
-    else
-      path = "#{@directory}/#{dst}/#{Time.now.strftime(@filename)}"
-      File.open(path, "a", @mode) { |f| f.puts(str) }
+    if !@channel || @channel =~ dst
+      str.replace("#{Time.now.strftime(K.c[:header])} #{str}")
+      STDOUT.puts(str)
+      if @keep_file_open
+        @logfiles[dst.to_sym].puts(str)
+      else
+        path = "#{@directory}/#{dst}/#{Time.now.strftime(@filename)}"
+        File.open(path, "a", @mode) { |f| f.puts(str) }
+      end
     end
   end
 
@@ -56,13 +56,14 @@ end
 Kh.join do |m, module_|
   if module_.kind_of?(K::Client)
     nick, = K::UtilMethod.parse_prefix(m.prefix)
+    channel_name = "#{m[0]}@#{module_.server_name}"
     if nick == module_.nick # Kanzashi's join
-      @log.add_dst("#{m[0].to_s}@#{module_.server_name}") if @log.persistent
+      @log.add_dst(channel_name) if @log.keep_file_open
     elsif @log.record?(:join) # others join
-      @log.puts("+ #{nick} (#{m.prefix}) to #{m[0]}@#{module_.server_name}", "#{m[0]}@#{module_.server_name}")
+      @log.puts("+ #{nick} (#{m.prefix}) to #{channel_name}", channel_name)
     end
-  else
-    m[0].to_s.split(",").each {|c| @log.add_dst(c) } if @log.persistent
+  elsif @log.keep_file_open
+    m[0].to_s.split(",").each {|c| @log.add_dst(c) }
   end
 end
 
@@ -73,10 +74,18 @@ Kh.part do |m, module_|
   end
 end
 
+Kh.quit do |m, module_|
+  if @log.record?(:quit) && module_.kind_of?(K::Client)
+    nick, = K::UtilMethod.parse_prefix(m.prefix)
+    @log.puts("! #{nick} (\"#{m[1]}\")", "#{m[0]}@#{module_.server_name}")
+  end
+end
+
 Kh.kick do |m, module_|
   if @log.record?(:kick) && module_.kind_of?(K::Client)
     nick, = K::UtilMethod.parse_prefix(m.prefix)
-    @log.puts("- #{m[1]} by #{nick} from#{m[0]}@#{module_.server_name} (#{m[2]})", "#{m[0]}@#{module_.server_name}")
+    channel_name = "#{m[0]}@#{module_.server_name}"
+    @log.puts("- #{m[1]} by #{nick} from #{channel_name} (#{m[2]})", channel_name)
   end
 end
 
@@ -104,15 +113,16 @@ Kh.privmsg do |m, module_|
 end
 
 Kh.notice do |m, module_|
+  channel_name = m[0].to_s
   if @log.record?(:privmsg) && !m.ctcp?
     nick, = K::UtilMethod.parse_prefix(m.prefix)
-    channel_name = m[0].to_s
     if module_.kind_of?(K::Client) # from others
       if channel_name != "*" && channel_name != module_.nick
+        channel_name.concat("@#{module_.server_name}")
         if @log.distinguish_myself
-          @log.puts(")#{channel_name}:#{nick}(#{m[1]}", "#{channel_name}@#{module_.server_name}")
+          @log.puts(")#{channel_name}:#{nick}(#{m[1]}", channel_name)
         else
-          @log.puts("(#{channel_name}:#{nick})#{m[1]}", "#{channel_name}@#{module_.server_name}")
+          @log.puts("(#{channel_name}:#{nick})#{m[1]}", channel_name)
         end
       end
     else # from Kanzashi's client
@@ -132,6 +142,7 @@ end
 
 Kh.invite do |m, module_|
   if @log.record?(:invite) && module_.kind_of?(K::Client)
-    @log.puts("Invited by #{m[0]}: #{m[1]}@#{module_.server_name}", "#{m[1]}@#{module_.server_name}")
+    channel_name = "#{m[1]}@#{module_.server_name}"
+    @log.puts("Invited by #{m[0]}: #{channel_name}", channel_name) 
   end
 end

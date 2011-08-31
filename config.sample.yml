@@ -38,8 +38,23 @@ plugins:
   detached_away: # Set AWAY when any client isn't connected (detached).
     enabled: false
     message: "sleeping" # away message will set when detached
-
-
-
+  log:
+    enabled: true
+    # whether or not to keep log files open
+    keep-file-open: true
+    # directory to record logs
+    directory: log
+    # format of every lines' header. if omitted, Kanzashi uses "%H:%M".
+    filename: "%Y.%m.%d.txt"
+    # mode of log files. default value is 0600.
+    mode: 0600
+    # mode of directory. default value is 0700.
+    dir-mode: 0700
+    # mask for command to record logs. if omitted, Kanzashi records about all channels.
+    command: privmsg,join,part,kick,invite,mode,nick,quit,kill,topic,notice
+    # whether or not to change formats when your own messages in PRIVMSG/NOTICE. default value is true.
+    distinguish-myself: true
+    # regular expression to specify channels to record. if omitted, Kanzashi records about all channels.
+    channel:
 # plugin_name:
 #   enabled: false
