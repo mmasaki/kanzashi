@@ -9,8 +9,7 @@ class Kanzashi::Plugin::Log
     @dir_mode = K.c[:dir_mode] || 0700
     @keep_file_open = K.c[:keep_file_open]
     @logfiles = {} if @keep_file_open
-    @command = K.c[:command].split(",")
-    @command.map!{|x| x.to_sym }
+    @command = K.c[:command].split(",").map!{|x| x.to_sym } if K.c[:command]
     @distinguish_myself = @distinguish_myself.nil? || K.c[:distinguish_myself]
     @channel = Regexp.new(K.c[:channel]) if K.c[:channel]
 
@@ -114,7 +113,7 @@ end
 
 Kh.notice do |m, module_|
   channel_name = m[0].to_s
-  if @log.record?(:privmsg) && !m.ctcp?
+  if @log.record?(:notice) && !m.ctcp?
     nick, = K::UtilMethod.parse_prefix(m.prefix)
     if module_.kind_of?(K::Client) # from others
       if channel_name != "*" && channel_name != module_.nick
@@ -144,5 +143,13 @@ Kh.invite do |m, module_|
   if @log.record?(:invite) && module_.kind_of?(K::Client)
     channel_name = "#{m[1]}@#{module_.server_name}"
     @log.puts("Invited by #{m[0]}: #{channel_name}", channel_name) 
+  end
+end
+
+Kh.topic do |m, module_|
+  if @log.record?(:topic) && module_.kind_of?(K::Client)
+    nick, = K::UtilMethod.parse_prefix(m.prefix)
+    channel_name = "#{m[0]}@#{module_.server_name}"
+    @log.puts("Topic of channel #{channel_name} by #{nick}: #{m[1]}", channel_name)
   end
 end
