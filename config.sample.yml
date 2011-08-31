@@ -58,5 +58,8 @@ plugins:
     distinguish-myself: true
     # regular expression to specify channels to record. if omitted, Kanzashi records about all channels.
     channel:
+  log_recent: # send recent log
+    enabled: true
+    lines: 20 # maximum lines to send
 # plugin_name:
 #   enabled: false
