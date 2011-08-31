@@ -11,8 +11,7 @@ class Kanzashi::Plugin::Log
     @logfiles = {} if @persistent
     @command = K.c[:command].split(",")
     @command.map!{|x| x.to_sym }
-    @distinguish_myself = K.c[:distinguish_myself]
-    @distinguish_myself = true if @distinguish_myself.nil?
+    @distinguish_myself = @distinguish_myself.nil? || K.c[:distinguish_myself]
 
     Dir.mkdir(@directory, @dir_mode) unless File.directory?(@directory)
   end  
@@ -23,6 +22,9 @@ class Kanzashi::Plugin::Log
     str.replace("#{Time.now.strftime(K.c[:header])} #{str}")
     STDOUT.puts(str)
     if @persistent
+      p dst
+      p @logfiles
+      p @logfiles[dst.to_sym]
       @logfiles[dst.to_sym].puts(str)
     else
       path = "#{@directory}/#{dst}/#{Time.now.strftime(@filename)}"
@@ -37,7 +39,8 @@ class Kanzashi::Plugin::Log
   end
 
   def add_dst(channel_name)
-    @logfiles[channel_name.to_sym] = self.file_open(channel_name)
+    key = channel_name.to_sym
+    @logfiles[key] = self.file_open(channel_name) unless @logfiles.has_key?(key)
   end
 
   # whether or not to record
@@ -53,11 +56,13 @@ end
 Kh.join do |m, module_|
   if module_.kind_of?(K::Client)
     nick, = K::UtilMethod.parse_prefix(m.prefix)
-    if nick == module_.nick && @log.persistent # Kanzashi's join
-      @log.add_dst("#{m[0].to_s}@#{module_.server_name}")
+    if nick == module_.nick # Kanzashi's join
+      @log.add_dst("#{m[0].to_s}@#{module_.server_name}") if @log.persistent
     elsif @log.record?(:join) # others join
       @log.puts("+ #{nick} (#{m.prefix}) to #{m[0]}@#{module_.server_name}", "#{m[0]}@#{module_.server_name}")
     end
+  else
+    m[0].to_s.split(",").each {|c| @log.add_dst(c) } if @log.persistent
   end
 end
 
@@ -101,16 +106,17 @@ end
 Kh.notice do |m, module_|
   if @log.record?(:privmsg) && !m.ctcp?
     nick, = K::UtilMethod.parse_prefix(m.prefix)
+    channel_name = m[0].to_s
     if module_.kind_of?(K::Client) # from others
-      unless m[0] == "*"
+      if channel_name != "*" && channel_name != module_.nick
         if @log.distinguish_myself
-          @log.puts(")#{m[0]}:#{nick}(#{m[1]}", "#{m[0]}@#{module_.server_name}")
+          @log.puts(")#{channel_name}:#{nick}(#{m[1]}", "#{channel_name}@#{module_.server_name}")
         else
-          @log.puts("(#{m[0]}:#{nick})#{m[1]}", "#{m[0]}@#{module_.server_name}")
+          @log.puts("(#{channel_name}:#{nick})#{m[1]}", "#{channel_name}@#{module_.server_name}")
         end
       end
     else # from Kanzashi's client
-      @log.puts(")#{m[0]}:#{module_.user[:nick]}( #{m[1]}", m[0].to_s)
+      @log.puts(")#{channel_name}:#{module_.user[:nick]}( #{m[1]}", channel_name)
     end
   end
 end
@@ -121,5 +127,11 @@ Kh.nick do |m, module_|
     module_.channels.each do |channel, value|
       @log.puts("#{nick} -> #{m[0]}", "#{channel}@#{module_.server_name}") if value[:names].include?(nick)
     end
+  end
+end
+
+Kh.invite do |m, module_|
+  if @log.record?(:invite) && module_.kind_of?(K::Client)
+    @log.puts("Invited by #{m[0]}: #{m[1]}@#{module_.server_name}", "#{m[1]}@#{module_.server_name}")
   end
 end
