@@ -72,6 +72,13 @@ module Kanzashi
           @channels[channel_sym][:names] << nic
           relay(channel_rewrite(line))
         end
+      when "INVITE"
+        if K.config[:others][:join_when_invited]
+          send_data("JOIN #{m[1]}\r\n")
+        else
+          log.debug("Client #{@server_name}:recv") { line.inspect }
+          relay(channel_rewrite(line))    
+        end
       when "NICK"
         nick, = K::UtilMethod.parse_prefix(m.prefix)
         @nick = m[0].to_s if nick == @nick
@@ -95,12 +102,9 @@ module Kanzashi
         @channels[channel_sym][:cache]["353".to_sym] = rewrited_message
         @channels[channel_sym][:names] = m[3].to_s.split # make names list
         relay(rewrited_message)
-      when "PRIVMSG", "NOTICE"
-        log.debug("Client #{@server_name}:recv") { line.inspect }
-        relay(channel_rewrite(line)) unless m.ctcp?
       else
         log.debug("Client #{@server_name}:recv") { line.inspect }
-        relay(channel_rewrite(line))
+        relay(channel_rewrite(line)) unless m.ctcp?
       end
     end
 

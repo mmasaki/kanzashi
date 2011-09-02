@@ -30,7 +30,8 @@ networks:
   #   port:  7070
   #   encoding: utf-8
   #   tls: true
-
+others:
+  join_when_invited: true
 plugins:
   detached_nick: # Change nickname when any client isn't connected (detached).
     enabled: false
