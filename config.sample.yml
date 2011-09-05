@@ -62,5 +62,9 @@ plugins:
   log_recent: # send recent log
     enabled: true
     lines: 20 # maximum lines to send
+  auto_oper: # auto opping
+    enabled: true
+    request: give me naruto # sentence to request op
+    mask: # channel mask(will be Regexp.new). if ommited, auto_op will be enabled all channels.
 # plugin_name:
 #   enabled: false
