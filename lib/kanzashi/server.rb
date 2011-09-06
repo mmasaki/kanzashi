@@ -37,8 +37,8 @@ module Kanzashi
       true
     end
 
-    alias :client? :from_server?
-    alias :server? :from_client?
+    alias from_server? client?
+    alias from_client? server?
 
     def post_init
       if config.server.tls # enable TLS

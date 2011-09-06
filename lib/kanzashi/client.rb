@@ -25,8 +25,8 @@ module Kanzashi
       false
     end
 
-    alias :client? :from_server?
-    alias :server? :from_client?
+    alias from_server? client?
+    alias from_client? server?
 
     def inspect
       "#<Client:#{@server_name}>"

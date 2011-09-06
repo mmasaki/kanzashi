@@ -53,7 +53,7 @@ Kh.start do
 end
 
 Kh.join do |m, receiver|
-  if receiver.kind_of?(K::Client)
+  if receiver.from_server?
     nick, = K::UtilMethod.parse_prefix(m.prefix)
     channel_name = "#{m[0]}@#{receiver.server_name}"
     if nick == receiver.nick # Kanzashi's join
@@ -66,8 +66,8 @@ Kh.join do |m, receiver|
   end
 end
 
-Kh.part do |m, receiver|
-  if @log.record?(:part) && receiver.kind_of?(K::Client)
+Kh.part_from_server do |m, receiver|
+  if @log.record?(:part)
     nick, = K::UtilMethod.parse_prefix(m.prefix)
     @log.puts("- #{nick} (\"#{m[1]}\")", "#{m[0]}@#{receiver.server_name}")
   end
