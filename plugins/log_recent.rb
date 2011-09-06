@@ -10,8 +10,8 @@ Kh.join_from_client do |m, receiver|
     path = "#{@directory}/#{channel_name}/#{filename}"
     if File.exist?(path)
       File.open(path) do |f|
-        recent_log = f.lines.reverse_each.first(@lines).reverse!
-        recent_log.each do |line, i|
+        recent_log = f.lines.reverse_each.first(@lines)
+        recent_log.reverse_each do |line, i|
           line.chomp!
           receiver.send_data(":Kanzashi NOTICE #{channel_name} :#{line}\r\n")
         end
