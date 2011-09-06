@@ -58,8 +58,9 @@ module Kanzashi
         return
       end
       line.force_encoding(Encoding::UTF_8)
-      m.params.map!{|x| x.force_encoding(Encoding::UTF_8) }
+      m.params.each{|x| x.force_encoding(Encoding::UTF_8) }
       Hook.call(m.command.downcase.to_sym, m, self)
+      Hook.call((m.command.downcase + "_from_server").to_sym, m, self)
       case m.command
       when "PING"
         send_data "PONG #{config.user.nick}\r\n" # reply to ping

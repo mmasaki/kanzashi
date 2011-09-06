@@ -120,6 +120,7 @@ module Kanzashi
         send_server(line)
       end
       Hook.call(m.command.downcase.to_sym, m, self)
+      Hook.call((m.command.downcase + "_from_client").to_sym, m, self)
     end
 
     def send_data(data)

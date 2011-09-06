@@ -75,6 +75,7 @@ end
 
 Kh.quit do |m, module_|
   if @log.record?(:quit) && module_.kind_of?(K::Client)
+    p m
     nick, = K::UtilMethod.parse_prefix(m.prefix)
     @log.puts("! #{nick} (\"#{m[1]}\")", "#{m[0]}@#{module_.server_name}")
   end
