@@ -125,8 +125,9 @@ end
 
 Kh.nick_from_server do |m, receiver|
   if @log.record?(:nick)
+    nick = m.prefix.nick
     receiver.channels.each do |channel, value|
-      @log.puts("#{m.prefix.nick} -> #{m[0]}", "#{channel}@#{receiver.server_name}") if value[:names].include?(nick)
+      @log.puts("#{nick} -> #{m[0]}", "#{channel}@#{receiver.server_name}") if value[:names].include?(nick)
     end
   end
 end
