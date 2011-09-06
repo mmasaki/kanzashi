@@ -73,24 +73,23 @@ Kh.part_from_server do |m, receiver|
   end
 end
 
-Kh.quit do |m, receiver|
-  if @log.record?(:quit) && receiver.kind_of?(K::Client)
-    p m
+Kh.quit_from_server do |m, receiver|
+  if @log.record?(:quit)
     nick, = K::UtilMethod.parse_prefix(m.prefix)
     @log.puts("! #{nick} (\"#{m[1]}\")", "#{m[0]}@#{receiver.server_name}")
   end
 end
 
-Kh.kick do |m, receiver|
-  if @log.record?(:kick) && receiver.kind_of?(K::Client)
+Kh.kick_from_server do |m, receiver|
+  if @log.record?(:kick)
     nick, = K::UtilMethod.parse_prefix(m.prefix)
     channel_name = "#{m[0]}@#{receiver.server_name}"
     @log.puts("- #{m[1]} by #{nick} from #{channel_name} (#{m[2]})", channel_name)
   end
 end
 
-Kh.mode do |m, receiver|
-  if @log.record?(:mode) && receiver.kind_of?(K::Client) && /^(#|&).+$/ =~ m[0].to_s # to avoid usermode MODE messages
+Kh.mode_from_server do |m, receiver|
+  if @log.record?(:mode) && /^(#|&).+$/ =~ m[0].to_s # to avoid usermode MODE messages
     nick, = K::UtilMethod.parse_prefix(m.prefix)
     @log.puts("Mode by #{nick}: #{m[0]} #{m[1]} #{m[2]}", "#{m[0]}@#{receiver.server_name}")
   end
@@ -130,8 +129,8 @@ Kh.notice do |m, receiver|
   end
 end
 
-Kh.nick do |m, receiver|
-  if @log.record?(:nick) && receiver.kind_of?(K::Client)
+Kh.nick_from_server do |m, receiver|
+  if @log.record?(:nick)
     nick, = K::UtilMethod.parse_prefix(m.prefix)
     receiver.channels.each do |channel, value|
       @log.puts("#{nick} -> #{m[0]}", "#{channel}@#{receiver.server_name}") if value[:names].include?(nick)
@@ -139,15 +138,15 @@ Kh.nick do |m, receiver|
   end
 end
 
-Kh.invite do |m, receiver|
-  if @log.record?(:invite) && receiver.kind_of?(K::Client)
+Kh.invite_from_server do |m, receiver|
+  if @log.record?(:invite)
     channel_name = "#{m[1]}@#{receiver.server_name}"
     @log.puts("Invited by #{m[0]}: #{channel_name}", channel_name) 
   end
 end
 
-Kh.topic do |m, receiver|
-  if @log.record?(:topic) && receiver.kind_of?(K::Client)
+Kh.topic_from_server do |m, receiver|
+  if @log.record?(:topic)
     nick, = K::UtilMethod.parse_prefix(m.prefix)
     channel_name = "#{m[0]}@#{receiver.server_name}"
     @log.puts("Topic of channel #{channel_name} by #{nick}: #{m[1]}", channel_name)
