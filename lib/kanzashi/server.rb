@@ -73,7 +73,12 @@ module Kanzashi
     end
 
     def receive_line(line)
-      m = Net::IRC::Message.parse(line)
+      begin
+        m = Net::IRC::Message.parse(line)
+      rescue Net::IRC::Message::InvalidMessage => ex
+        puts ex.message
+        return
+      end
       log.debug("Server:receive_line") {"Received line: #{line.chomp.inspect}"}
       Hook.call(:receive_line, m,line.chomp)
       if config.server.pass && m.command == "PASS" # authenticate

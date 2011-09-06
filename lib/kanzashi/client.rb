@@ -93,8 +93,7 @@ module Kanzashi
           relay(channel_rewrite(line))    
         end
       when "NICK"
-        nick, = K::UtilMethod.parse_prefix(m.prefix)
-        @nick = m[0].to_s if nick == @nick
+        @nick = m[0].to_s if m.prefix.nick == @nick
         relay(channel_rewrite(line))
       when "002"
         config.networks[@server_name].join_to.each do |channel| # join to channel specifed in config file

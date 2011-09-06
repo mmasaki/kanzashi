@@ -54,7 +54,7 @@ end
 
 Kh.join do |m, receiver|
   if receiver.from_server?
-    nick, = K::UtilMethod.parse_prefix(m.prefix)
+    nick = m.prefix.nick
     channel_name = "#{m[0]}@#{receiver.server_name}"
     if nick == receiver.nick # Kanzashi's join
       @log.add_dst(channel_name) if @log.keep_file_open
@@ -68,41 +68,36 @@ end
 
 Kh.part_from_server do |m, receiver|
   if @log.record?(:part)
-    nick, = K::UtilMethod.parse_prefix(m.prefix)
-    @log.puts("- #{nick} (\"#{m[1]}\")", "#{m[0]}@#{receiver.server_name}")
+    @log.puts("- #{m.prefix.nick} (\"#{m[1]}\")", "#{m[0]}@#{receiver.server_name}")
   end
 end
 
 Kh.quit_from_server do |m, receiver|
   if @log.record?(:quit)
-    nick, = K::UtilMethod.parse_prefix(m.prefix)
-    @log.puts("! #{nick} (\"#{m[1]}\")", "#{m[0]}@#{receiver.server_name}")
+    @log.puts("! #{m.prefix.nick} (\"#{m[1]}\")", "#{m[0]}@#{receiver.server_name}")
   end
 end
 
 Kh.kick_from_server do |m, receiver|
   if @log.record?(:kick)
-    nick, = K::UtilMethod.parse_prefix(m.prefix)
     channel_name = "#{m[0]}@#{receiver.server_name}"
-    @log.puts("- #{m[1]} by #{nick} from #{channel_name} (#{m[2]})", channel_name)
+    @log.puts("- #{m[1]} by #{m.prefix.nick} from #{channel_name} (#{m[2]})", channel_name)
   end
 end
 
 Kh.mode_from_server do |m, receiver|
   if @log.record?(:mode) && /^(#|&).+$/ =~ m[0].to_s # to avoid usermode MODE messages
-    nick, = K::UtilMethod.parse_prefix(m.prefix)
-    @log.puts("Mode by #{nick}: #{m[0]} #{m[1]} #{m[2]}", "#{m[0]}@#{receiver.server_name}")
+    @log.puts("Mode by #{m.prefix.nick}: #{m[0]} #{m[1]} #{m[2]}", "#{m[0]}@#{receiver.server_name}")
   end
 end
 
 Kh.privmsg do |m, receiver|
   if @log.record?(:privmsg) && !m.ctcp?
-    nick, = K::UtilMethod.parse_prefix(m.prefix)
-    if receiver.kind_of?(K::Client) # from others
+    if receiver.from_server?
       if @log.distinguish_myself
-        @log.puts(">#{m[0]}:#{nick}< #{m[1]}", "#{m[0]}@#{receiver.server_name}")
+        @log.puts(">#{m[0]}:#{m.prefix.nick}< #{m[1]}", "#{m[0]}@#{receiver.server_name}")
       else
-        @log.puts("<#{m[0]}:#{nick}> #{m[1]}", "#{m[0]}@#{receiver.server_name}")    
+        @log.puts("<#{m[0]}:#{m.prefix.nick}> #{m[1]}", "#{m[0]}@#{receiver.server_name}")    
       end
     else # from Kanzashi's client
       @log.puts(">#{m[0]}:#{receiver.user[:nick]}< #{m[1]}", m[0].to_s)
@@ -113,14 +108,13 @@ end
 Kh.notice do |m, receiver|
   channel_name = m[0].to_s
   if @log.record?(:notice) && !m.ctcp?
-    nick, = K::UtilMethod.parse_prefix(m.prefix)
-    if receiver.kind_of?(K::Client) # from others
+    if receiver.from_server?
       if channel_name != "*" && channel_name != receiver.nick
         channel_name.concat("@#{receiver.server_name}")
         if @log.distinguish_myself
-          @log.puts(")#{channel_name}:#{nick}(#{m[1]}", channel_name)
+          @log.puts(")#{channel_name}:#{m.prefix.nick}(#{m[1]}", channel_name)
         else
-          @log.puts("(#{channel_name}:#{nick})#{m[1]}", channel_name)
+          @log.puts("(#{channel_name}:#{m.prefix.nick})#{m[1]}", channel_name)
         end
       end
     else # from Kanzashi's client
@@ -131,9 +125,8 @@ end
 
 Kh.nick_from_server do |m, receiver|
   if @log.record?(:nick)
-    nick, = K::UtilMethod.parse_prefix(m.prefix)
     receiver.channels.each do |channel, value|
-      @log.puts("#{nick} -> #{m[0]}", "#{channel}@#{receiver.server_name}") if value[:names].include?(nick)
+      @log.puts("#{m.prefix.nick} -> #{m[0]}", "#{channel}@#{receiver.server_name}") if value[:names].include?(nick)
     end
   end
 end
@@ -147,8 +140,7 @@ end
 
 Kh.topic_from_server do |m, receiver|
   if @log.record?(:topic)
-    nick, = K::UtilMethod.parse_prefix(m.prefix)
     channel_name = "#{m[0]}@#{receiver.server_name}"
-    @log.puts("Topic of channel #{channel_name} by #{nick}: #{m[1]}", channel_name)
+    @log.puts("Topic of channel #{channel_name} by #{m.prefix.nick}: #{m[1]}", channel_name)
   end
 end
