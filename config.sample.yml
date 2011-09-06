@@ -31,7 +31,7 @@ networks:
   #   encoding: utf-8
   #   tls: true
 others:
-  join_when_invited: true
+  join_when_invited: true # if true, join the channel when invited.
 plugins:
   detached_nick: # Change nickname when any client isn't connected (detached).
     enabled: false
