@@ -17,6 +17,17 @@ module Kanzashi
       @nick = config.user.nick
     end
 
+    def client?
+      true
+    end
+
+    def server?
+      false
+    end
+
+    alias :client? :from_server?
+    alias :server? :from_client?
+
     def inspect
       "#<Client:#{@server_name}>"
     end

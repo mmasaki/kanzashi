@@ -29,6 +29,17 @@ module Kanzashi
       @@client_count += 1
     end
 
+    def client?
+      false
+    end
+
+    def server?
+      true
+    end
+
+    alias :client? :from_server?
+    alias :server? :from_client?
+
     def post_init
       if config.server.tls # enable TLS
         start_tls(config.server.tls.kind_of?(Hash) ? config.server.tls : {})

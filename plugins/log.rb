@@ -52,11 +52,11 @@ Kh.start do
   @log = Kanzashi::Plugin::Log.new
 end
 
-Kh.join do |m, module_|
-  if module_.kind_of?(K::Client)
+Kh.join do |m, receiver|
+  if receiver.kind_of?(K::Client)
     nick, = K::UtilMethod.parse_prefix(m.prefix)
-    channel_name = "#{m[0]}@#{module_.server_name}"
-    if nick == module_.nick # Kanzashi's join
+    channel_name = "#{m[0]}@#{receiver.server_name}"
+    if nick == receiver.nick # Kanzashi's join
       @log.add_dst(channel_name) if @log.keep_file_open
     elsif @log.record?(:join) # others join
       @log.puts("+ #{nick} (#{m.prefix}) to #{channel_name}", channel_name)
@@ -66,58 +66,58 @@ Kh.join do |m, module_|
   end
 end
 
-Kh.part do |m, module_|
-  if @log.record?(:part) && module_.kind_of?(K::Client)
+Kh.part do |m, receiver|
+  if @log.record?(:part) && receiver.kind_of?(K::Client)
     nick, = K::UtilMethod.parse_prefix(m.prefix)
-    @log.puts("- #{nick} (\"#{m[1]}\")", "#{m[0]}@#{module_.server_name}")
+    @log.puts("- #{nick} (\"#{m[1]}\")", "#{m[0]}@#{receiver.server_name}")
   end
 end
 
-Kh.quit do |m, module_|
-  if @log.record?(:quit) && module_.kind_of?(K::Client)
+Kh.quit do |m, receiver|
+  if @log.record?(:quit) && receiver.kind_of?(K::Client)
     p m
     nick, = K::UtilMethod.parse_prefix(m.prefix)
-    @log.puts("! #{nick} (\"#{m[1]}\")", "#{m[0]}@#{module_.server_name}")
+    @log.puts("! #{nick} (\"#{m[1]}\")", "#{m[0]}@#{receiver.server_name}")
   end
 end
 
-Kh.kick do |m, module_|
-  if @log.record?(:kick) && module_.kind_of?(K::Client)
+Kh.kick do |m, receiver|
+  if @log.record?(:kick) && receiver.kind_of?(K::Client)
     nick, = K::UtilMethod.parse_prefix(m.prefix)
-    channel_name = "#{m[0]}@#{module_.server_name}"
+    channel_name = "#{m[0]}@#{receiver.server_name}"
     @log.puts("- #{m[1]} by #{nick} from #{channel_name} (#{m[2]})", channel_name)
   end
 end
 
-Kh.mode do |m, module_|
-  if @log.record?(:mode) && module_.kind_of?(K::Client) && /^(#|&).+$/ =~ m[0].to_s # to avoid usermode MODE messages
+Kh.mode do |m, receiver|
+  if @log.record?(:mode) && receiver.kind_of?(K::Client) && /^(#|&).+$/ =~ m[0].to_s # to avoid usermode MODE messages
     nick, = K::UtilMethod.parse_prefix(m.prefix)
-    @log.puts("Mode by #{nick}: #{m[0]} #{m[1]} #{m[2]}", "#{m[0]}@#{module_.server_name}")
+    @log.puts("Mode by #{nick}: #{m[0]} #{m[1]} #{m[2]}", "#{m[0]}@#{receiver.server_name}")
   end
 end
 
-Kh.privmsg do |m, module_|
+Kh.privmsg do |m, receiver|
   if @log.record?(:privmsg) && !m.ctcp?
     nick, = K::UtilMethod.parse_prefix(m.prefix)
-    if module_.kind_of?(K::Client) # from others
+    if receiver.kind_of?(K::Client) # from others
       if @log.distinguish_myself
-        @log.puts(">#{m[0]}:#{nick}< #{m[1]}", "#{m[0]}@#{module_.server_name}")
+        @log.puts(">#{m[0]}:#{nick}< #{m[1]}", "#{m[0]}@#{receiver.server_name}")
       else
-        @log.puts("<#{m[0]}:#{nick}> #{m[1]}", "#{m[0]}@#{module_.server_name}")    
+        @log.puts("<#{m[0]}:#{nick}> #{m[1]}", "#{m[0]}@#{receiver.server_name}")    
       end
     else # from Kanzashi's client
-      @log.puts(">#{m[0]}:#{module_.user[:nick]}< #{m[1]}", m[0].to_s)
+      @log.puts(">#{m[0]}:#{receiver.user[:nick]}< #{m[1]}", m[0].to_s)
     end
   end
 end
 
-Kh.notice do |m, module_|
+Kh.notice do |m, receiver|
   channel_name = m[0].to_s
   if @log.record?(:notice) && !m.ctcp?
     nick, = K::UtilMethod.parse_prefix(m.prefix)
-    if module_.kind_of?(K::Client) # from others
-      if channel_name != "*" && channel_name != module_.nick
-        channel_name.concat("@#{module_.server_name}")
+    if receiver.kind_of?(K::Client) # from others
+      if channel_name != "*" && channel_name != receiver.nick
+        channel_name.concat("@#{receiver.server_name}")
         if @log.distinguish_myself
           @log.puts(")#{channel_name}:#{nick}(#{m[1]}", channel_name)
         else
@@ -125,31 +125,31 @@ Kh.notice do |m, module_|
         end
       end
     else # from Kanzashi's client
-      @log.puts(")#{channel_name}:#{module_.user[:nick]}( #{m[1]}", channel_name)
+      @log.puts(")#{channel_name}:#{receiver.user[:nick]}( #{m[1]}", channel_name)
     end
   end
 end
 
-Kh.nick do |m, module_|
-  if @log.record?(:nick) && module_.kind_of?(K::Client)
+Kh.nick do |m, receiver|
+  if @log.record?(:nick) && receiver.kind_of?(K::Client)
     nick, = K::UtilMethod.parse_prefix(m.prefix)
-    module_.channels.each do |channel, value|
-      @log.puts("#{nick} -> #{m[0]}", "#{channel}@#{module_.server_name}") if value[:names].include?(nick)
+    receiver.channels.each do |channel, value|
+      @log.puts("#{nick} -> #{m[0]}", "#{channel}@#{receiver.server_name}") if value[:names].include?(nick)
     end
   end
 end
 
-Kh.invite do |m, module_|
-  if @log.record?(:invite) && module_.kind_of?(K::Client)
-    channel_name = "#{m[1]}@#{module_.server_name}"
+Kh.invite do |m, receiver|
+  if @log.record?(:invite) && receiver.kind_of?(K::Client)
+    channel_name = "#{m[1]}@#{receiver.server_name}"
     @log.puts("Invited by #{m[0]}: #{channel_name}", channel_name) 
   end
 end
 
-Kh.topic do |m, module_|
-  if @log.record?(:topic) && module_.kind_of?(K::Client)
+Kh.topic do |m, receiver|
+  if @log.record?(:topic) && receiver.kind_of?(K::Client)
     nick, = K::UtilMethod.parse_prefix(m.prefix)
-    channel_name = "#{m[0]}@#{module_.server_name}"
+    channel_name = "#{m[0]}@#{receiver.server_name}"
     @log.puts("Topic of channel #{channel_name} by #{nick}: #{m[1]}", channel_name)
   end
 end
