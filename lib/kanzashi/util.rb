@@ -1,15 +1,15 @@
 module Kanzashi
   module Util
+    # class CustomHash and CustomArray is public domain.
+    # https://gist.github.com/1668637
+
     class CustomHash < Hash
-      class << self
-        undef new
-        def new(a)
-          self[a]
-        end
+      def self.new(a)
+        self[a]
       end
 
       def self.[](a)
-        h = (super a.to_a)
+        h = super(a.to_a)
         h.keys.select{|key| key.kind_of?(String) }.each do |key|
           h[key.to_sym] = h.delete(key)
         end
@@ -18,7 +18,7 @@ module Kanzashi
           when Array
             h[key] = CustomArray.new(value)
           when Hash
-            h[key] = CustomHash.new(value)
+            h[key] = CustomHash[value]
           end
         end
         h
