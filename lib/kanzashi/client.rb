@@ -61,11 +61,11 @@ module Kanzashi
     end
 
     def receive_line(line)
-      line.encode!(Encoding::UTF_8, @encoding, {:invalid => :replace}).force_encoding(Encoding::ASCII_8BIT)
+      line.force_encoding(Encoding::BINARY)
       begin
         m = Net::IRC::Message.parse(line)
       rescue Net::IRC::Message::InvalidMessage => ex
-        puts ex.message
+        puts ex.message.encode!(Encoding::UTF_8)
         return
       end
       line.force_encoding(Encoding::UTF_8)
@@ -122,7 +122,9 @@ module Kanzashi
 
     # process receiveed data
     def receive_data(data)
+      data.encode!(Encoding::UTF_8, @encoding, :invalid => :replace)
       @buffer.extract(data).each do |line|
+        line.chomp!
         line.concat("\r\n")
         receive_line(line)
       end
