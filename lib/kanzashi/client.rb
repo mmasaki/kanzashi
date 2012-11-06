@@ -138,8 +138,8 @@ module Kanzashi
         relay(rewrited_message)
       else
         log.debug("Client #{@server_name}:recv") { line.inspect }
+        m.params[1].force_encoding(Encoding::BINARY)
         begin
-          m.params[1].force_encoding(Encoding::BINARY)
           relay(channel_rewrite(line)) unless m.ctcp?
         ensure
           m.params[1].force_encoding(Encoding::UTF_8)
@@ -159,7 +159,7 @@ module Kanzashi
           channels = param.split(",")
           channels.each do |channel|
             channel.concat(config.separator)
-            channel.concat(@server_name)
+            channel.concat(@server_name.to_s)
           end
           param.replace(channels.join(","))
           break

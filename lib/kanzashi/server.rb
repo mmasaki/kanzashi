@@ -10,7 +10,7 @@ module Kanzashi
       def networks; @@networks; end
 
       # send data to all IRC servers
-      def self.send_to_all(data)
+      def send_to_all(data)
         @@networks.each_value do |server|
           server.send_data(data)
         end
@@ -20,24 +20,24 @@ module Kanzashi
         Plugin.plug_all
 
         Hook.call(:start)
-        log.info("Server:start") {"Kanzashi starting..."}
+        log.info("Server:start") { "Kanzashi starting..." }
 
         @@networks = {}
         config.networks.each do |server_name, server|
-          log.info("Server:connect") {"Connecting to #{server_name}..."}
+          log.info("Server:connect") { "Connecting to #{server_name}..." }
           Hook.call(:connect, server_name)
-          log.debug("Server:connect") {"#{server_name}: #{server}"}
+          log.debug("Server:connect") { "#{server_name}: #{server}" }
 
           connection = EventMachine.connect(server.host, server.port, Client, server_name, server.encoding||"UTF-8", server.tls)
           @@networks[server_name] = connection
 
-          connection.send_data "NICK #{config.user.nick}\r\nUSER #{config.user.user||config.user.nick} 8 * :#{config.user.real}\r\n"
+          connection.send_data "NICK #{config.user.nick}\r\nUSER #{config.user.user||config.user.nick} 8 * :#{config.user.real}"
 
           Hook.call(:connected, server_name)
-          log.info("Server:connect") {"Connected to #{server_name}."}
+          log.info("Server:connect") { "Connected to #{server_name}." }
         end
 
-        log.info("Server:start") {"Kanzashi started."}
+        log.info("Server:start") { "Kanzashi started." }
         Hook.call(:started)
         Hook.call(:detached, nil)
       end
@@ -49,8 +49,8 @@ module Kanzashi
 
     def initialize
       Client.add_connection(self)
-      Hook.call(:new_connection,self)
-      @buffer = BufferedTokenizer.new("\r\n")
+      Hook.call(:new_connection, self)
+      @buffer = BufferedTokenizer.new(CRLF)
       @user = {}
       @@client_count += 1
     end
@@ -65,6 +65,32 @@ module Kanzashi
         start_tls(config.server.tls.kind_of?(Hash) ? config.server.tls : {})
       end
     end
+
+    def send_data(data)
+      log.debug("Server:send_data") { data.inspect }
+      data.concat(CRLF)
+      super
+    end
+
+    def receive_data(data)
+      @buffer.extract(data).each do |line|
+        line.concat(CRLF)
+        receive_line(line)
+      end
+    end
+
+    # if detached, call Hook.detached.
+    def unbind
+      @@client_count -= 1
+      Hook.call(:unbind, self)
+      Hook.call(:detached, self) if @@client_count.zero?
+    end
+
+    def receive_from_server(data)
+      send_data(data)
+    end
+
+    private
 
     def receive_line(line)
       begin
@@ -83,7 +109,7 @@ module Kanzashi
       end
       unless @auth # Without authentication, it is needed to refuse all message except PASS
         Hook.call(:bad_password, self)
-        send_data "ERROR :Bad password?\r\n"
+        send_data "ERROR :Bad password?"
         close_connection_after_writing
       end
       case m.command
@@ -100,61 +126,36 @@ module Kanzashi
         @user[:realname] = m[3].to_s
         @user[:prefix] = "#{@user[:nick]}!#{@user[:username]}@localhost"
 
-        send_data ":localhost 001 #{@user[:nick]} :Welcome to the Internet Relay Network #{@user[:prefix]}\r\n"
+        send_data ":localhost 001 #{@user[:nick]} :Welcome to the Internet Relay Network #{@user[:prefix]}"
 
         unless @user[:nick] == config.user.nick
-          send_data ":#{@user[:prefix]} NICK #{config.user.nick}\r\n"
+          send_data ":#{@user[:prefix]} NICK #{config.user.nick}"
           @user[:nick] = config.user.nick
           @user[:prefix] = "#{@user[:nick]}!#{@user[:username]}@localhost"
         end
 
         @@networks.each do |name,client|
           client.channels.each do |channel,v|
-            send_data ":#{@user[:prefix]} JOIN #{channel}#{config.separator}#{name}\r\n"
-            v[:cache].each {|k,l| send_data(l.chomp << "\r\n")}
+            send_data ":#{@user[:prefix]} JOIN #{channel}#{config.separator}#{name}"
+            v[:cache].each {|k,l| send_data(l.chomp)}
           end
         end
       when "JOIN"
         channels = m[0].split(",")
         channels.each do |channel|
-          send_data ":#{@user[:prefix]} JOIN #{channel}\r\n" # in this case, i couldn't join channels with LimeChat
-#          send_data ":#{@user[:username]} JOIN #{channel}\r\n"
+          send_data ":#{@user[:prefix]} JOIN #{channel}" # in this case, i couldn't join channels with LimeChat
           channel_name, server = split_channel_and_server(channel)
           server.join(channel_name)
         end
       when "QUIT"
         Hook.call(:quit, self)
-        send_data "ERROR :Closing Link.\r\n"
+        send_data "ERROR :Closing Link."
         close_connection_after_writing
       else
         send_server(line)
       end
       Hook.call(m.command.downcase.to_sym, m, self)
       Hook.call((m.command.downcase + "_from_client").to_sym, m, self)
-    end
-
-    def send_data(data)
-      log.debug("Server:send_data"){data.inspect}
-      super data
-    end
-
-    def receive_data(data)
-      @buffer.extract(data).each do |line|
-        line.concat("\r\n")
-        receive_line(line)
-      end
-    end
-
-    def split_channel_and_server(channel)
-      if /^:?((?:#|%|!).+)#{Regexp.escape(config.separator)}(.+)/ =~ channel
-        channel_name = $1
-        server = @@networks[$2.to_sym]
-      end
-      unless server # in cases where the user specifies invaild server
-        channel_name = channel
-        server = @@networks.first[1] # the first connection of servers list
-      end
-      [channel_name, server]
     end
 
     # send data to specified IRC server
@@ -173,20 +174,21 @@ module Kanzashi
         channels.split(",").each do |channel_with_host|
           channel_name, server = split_channel_and_server(channel_with_host)
           params[channel_pos].replace(channel_name)
-          server.send_data("#{params.join(" ")}\r\n")
+          server.send_data(params.join(" "))
         end
       end
     end
 
-    # if detached, call Hook.detached.
-    def unbind
-      @@client_count -= 1
-      Hook.call(:unbind, self)
-      Hook.call(:detached, self) if @@client_count.zero?
-    end
-
-    def receive_from_server(data)
-      send_data(data)
+    def split_channel_and_server(channel)
+      if /^:?((?:#|%|!).+)#{Regexp.escape(config.separator)}(.+)/ =~ channel
+        channel_name = $1
+        server = @@networks[$2.to_sym]
+      end
+      unless server # in cases where the user specifies invaild server
+        channel_name = channel
+        server = @@networks.first[1] # the first connection of servers list
+      end
+      [channel_name, server]
     end
   end
 end
