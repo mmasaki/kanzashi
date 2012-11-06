@@ -120,7 +120,7 @@ module Kanzashi
       end
     end
 
-    # process receiveed data
+    # process received data
     def receive_data(data)
       data.encode!(Encoding::UTF_8, @encoding, :invalid => :replace)
       @buffer.extract(data).each do |line|
