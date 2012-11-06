@@ -6,6 +6,7 @@ require 'optparse'
 require 'digest/sha2'
 
 module Kanzashi
+  CRLF = "\r\n"
 end
 
 require_relative "kanzashi/util"

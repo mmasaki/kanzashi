@@ -12,7 +12,7 @@ module Kanzashi
       @server_name = server_name
       @encoding = Encoding.find(encoding)
       @channels = {}
-      @buffer = BufferedTokenizer.new("\r\n")
+      @buffer = BufferedTokenizer.new(CRLF)
       @use_tls = use_tls
       @nick = config.user.nick
     end
@@ -57,7 +57,7 @@ module Kanzashi
           break
         end
       end
-      params.join(" ").concat("\r\n")
+      params.join(" ").concat(CRLF)
     end
 
     def receive_line(line)
@@ -74,7 +74,7 @@ module Kanzashi
       Hook.call((m.command.downcase + "_from_server").to_sym, m, self)
       case m.command
       when "PING"
-        send_data "PONG #{config.user.nick}\r\n" # reply to ping
+        send_data "PONG #{config.user.nick}" # reply to ping
       when "JOIN"
         channel_sym = m[0].to_s.to_sym
         /^(.+?)(!.+?)?(@.+?)?$/ =~ m.prefix
@@ -87,7 +87,7 @@ module Kanzashi
         end
       when "INVITE"
         if K.config[:others][:join_when_invited]
-          send_data("JOIN #{m[1]}\r\n")
+          send_data "JOIN #{m[1]}"
         else
           log.debug("Client #{@server_name}:recv") { line.inspect }
           relay(channel_rewrite(line))    
@@ -97,8 +97,13 @@ module Kanzashi
         relay(channel_rewrite(line))
       when "002"
         config.networks[@server_name].join_to.each do |channel| # join to channel specifed in config file
-          # TODO: should use String#prepend
-          channel.replace("##{channel}") unless /^#/ =~ channel
+          unless /^#/ =~ channel
+            if channel.respond_to?(:prepend)
+              channel.prepend("#")
+            else
+              channel.replace("##{channel}")
+            end
+          end
           join(channel)
           sleep 0.2
         end
@@ -125,7 +130,7 @@ module Kanzashi
       data.encode!(Encoding::UTF_8, @encoding, :invalid => :replace)
       @buffer.extract(data).each do |line|
         line.chomp! # some IRC servers send CR+CR+LF in message of the day
-        line.concat("\r\n")
+        line.concat(CRLF)
         receive_line(line)
       end
     end
@@ -140,19 +145,20 @@ module Kanzashi
       if @channels.has_key?(channel_sym) # cases that kanzashi already joined specifed channnel
         @channels[channel_sym][:cache].each_value {|line| relay(line) } # send cached who list
       else # cases that kanzashi hasn't joined specifed channnel yet
-        send_data("JOIN #{channel_name}\r\n")
+        send_data "JOIN #{channel_name}"
       end
     end
 
     def send_data(data)
+      data.concat(CRLF)
       log.debug("Client #{@server_name}:send_data") { data.inspect }
-      data.encode!(@encoding, Encoding::UTF_8, {:invalid => :replace})
+      data.encode!(@encoding, Encoding::UTF_8, :invalid => :replace )
       super
     end
 
     def nick=(new_nick)
       log.debug("Client #{@server_name}:change_nick") { new_nick.inspect }
-      send_data "NICK #{new_nick}\r\n"
+      send_data "NICK #{new_nick}"
     end
   end
 end

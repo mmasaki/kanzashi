@@ -7,7 +7,8 @@ server:
   # port: 8081
   # tls: true
   pass: proxy_pass
-  # Or SHA2 sum is acceptable.
+  # Or SHA256 sum is acceptable.
+  # You can create sum with '$ bin/kanzashi.rb --make-password'
   # pass: d74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1
 networks:
   network_name: # network name is used for channel name.
