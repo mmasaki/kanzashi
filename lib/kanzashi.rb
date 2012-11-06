@@ -6,6 +6,7 @@ require 'optparse'
 require 'digest/sha2'
 
 module Kanzashi
+  EncodeOpt = { :invalid => :replace, :undef => :replace }
   CRLF = "\r\n"
 end
 

@@ -2,14 +2,21 @@ module Kanzashi
   # a module to communicate with IRC servers as a client
   module Client
     include Kanzashi
-    class << self; include UtilMethod; end
+    class << self
+      include UtilMethod
+
+      # add new connection from clients
+      def add_connection(connection)
+        @@relay_to << connection
+      end
+    end
 
     @@relay_to = [] # an array includes connections to relay
 
     attr_reader :channels, :nick, :server_name
 
     def initialize(server_name, encoding, use_tls=false)
-      @server_name = server_name
+      @server_name = server_name.freeze
       @encoding = Encoding.find(encoding)
       @channels = {}
       @buffer = BufferedTokenizer.new(CRLF)
@@ -17,47 +24,57 @@ module Kanzashi
       @nick = config.user.nick
     end
 
-    def client?
-      true
-    end
-
-    def server?
-      false
-    end
-
+    def client?; true; end
+    def server?; false; end
     alias from_server? client?
     alias from_client? server?
 
     def inspect
       "#<Client:#{@server_name}>"
     end
+
     alias to_s inspect
 
     def post_init
       start_tls if @use_tls # enable TLS
     end
 
-    # add new connection from clients
-    def self.add_connection(connection)
-      @@relay_to << connection
+    # process received data
+    def receive_data(data)
+      data.encode!(Encoding::UTF_8, @encoding, EncodeOpt)
+      @buffer.extract(data).each do |line|
+        line.chomp! # some IRC servers send CR+CR+LF in message of the day
+        line.concat(CRLF)
+        receive_line(line)
+      end
     end
 
-    # rewrite channel names for Kanzashi clients
-    def channel_rewrite(line)
-      begin
-        params = line.split
-      rescue ArgumentError => ex
-        puts ex.message
+    def send_data(data)
+      data.concat(CRLF)
+      log.debug("Client #{@server_name}:send_data") { data.inspect }
+      data.encode!(@encoding, Encoding::UTF_8, EncodeOpt)
+      super
+    end
+
+    def nick=(new_nick)
+      log.debug("Client #{@server_name}:change_nick") { new_nick.inspect }
+      send_data "NICK #{new_nick}"
+    end
+
+    def join(channel_name)
+      log.debug("Client #{@server_name}:join") { channel_name }
+      channel_sym = channel_name.to_sym
+      if @channels.has_key?(channel_sym) # cases that kanzashi already joined specifed channnel
+        @channels[channel_sym][:cache].each_value {|line| relay(line) } # send cached who list
+      else # cases that kanzashi hasn't joined specifed channnel yet
+        send_data "JOIN #{channel_name}"
       end
-      params.each do |param|
-        if /^:?(#|&)/ =~ param
-          channels = param.split(",")
-          channels.map! { |channel| "#{channel}#{config.separator}#{@server_name}" }
-          param.replace(channels.join(","))
-          break
-        end
-      end
-      params.join(" ").concat(CRLF)
+    end
+
+    private
+
+    def relay(data)
+      @@relay_to.each { |r| r.receive_from_server(data) }
     end
 
     def receive_line(line)
@@ -105,7 +122,7 @@ module Kanzashi
             end
           end
           join(channel)
-          sleep 0.2
+          sleep 0.2 # to avoid excess flood
         end
         Kh.call(:client_welcome, self)
       when "332", "333", "366" # TODO: Able to refact
@@ -121,44 +138,34 @@ module Kanzashi
         relay(rewrited_message)
       else
         log.debug("Client #{@server_name}:recv") { line.inspect }
-        relay(channel_rewrite(line)) unless m.ctcp?
+        begin
+          m.params[1].force_encoding(Encoding::BINARY)
+          relay(channel_rewrite(line)) unless m.ctcp?
+        ensure
+          m.params[1].force_encoding(Encoding::UTF_8)
+        end
       end
     end
 
-    # process received data
-    def receive_data(data)
-      data.encode!(Encoding::UTF_8, @encoding, :invalid => :replace)
-      @buffer.extract(data).each do |line|
-        line.chomp! # some IRC servers send CR+CR+LF in message of the day
-        line.concat(CRLF)
-        receive_line(line)
+    # rewrite channel names for Kanzashi clients
+    def channel_rewrite(line)
+      begin
+        params = line.split
+      rescue ArgumentError => ex
+        puts ex.message
       end
-    end
-
-    def relay(data)
-      @@relay_to.each { |r| r.receive_from_server(data) }
-    end
-
-    def join(channel_name)
-      log.debug("Client #{@server_name}:join") { channel_name }
-      channel_sym = channel_name.to_sym
-      if @channels.has_key?(channel_sym) # cases that kanzashi already joined specifed channnel
-        @channels[channel_sym][:cache].each_value {|line| relay(line) } # send cached who list
-      else # cases that kanzashi hasn't joined specifed channnel yet
-        send_data "JOIN #{channel_name}"
+      params.each do |param|
+        if /^:?(#|&)/ =~ param
+          channels = param.split(",")
+          channels.each do |channel|
+            channel.concat(config.separator)
+            channel.concat(@server_name)
+          end
+          param.replace(channels.join(","))
+          break
+        end
       end
-    end
-
-    def send_data(data)
-      data.concat(CRLF)
-      log.debug("Client #{@server_name}:send_data") { data.inspect }
-      data.encode!(@encoding, Encoding::UTF_8, :invalid => :replace )
-      super
-    end
-
-    def nick=(new_nick)
-      log.debug("Client #{@server_name}:change_nick") { new_nick.inspect }
-      send_data "NICK #{new_nick}"
+      params.join(" ").concat(CRLF)
     end
   end
 end

@@ -2,24 +2,50 @@ module Kanzashi
   # a module behaves like an IRC server to IRC clients.
   module Server
     include Kanzashi
-    class << self; include UtilMethod; end
-    @@client_count = 0
+    class << self
+      include UtilMethod
 
-    def self.networks; @@networks; end
+      # return the count of connections from IRC clients
+      def client_count; @@client_count; end
+      def networks; @@networks; end
 
-    attr_reader :user
+      # send data to all IRC servers
+      def self.send_to_all(data)
+        @@networks.each_value do |server|
+          server.send_data(data)
+        end
+      end
 
-    # return the count of connections from IRC clients
-    def self.client_count 
-      @@client_count
-    end
+      def start_and_connect
+        Plugin.plug_all
 
-    # send data to all IRC servers
-    def self.send_to_all(data)
-      @@networks.each_value do |server|
-        server.send_data(data)
+        Hook.call(:start)
+        log.info("Server:start") {"Kanzashi starting..."}
+
+        @@networks = {}
+        config.networks.each do |server_name, server|
+          log.info("Server:connect") {"Connecting to #{server_name}..."}
+          Hook.call(:connect, server_name)
+          log.debug("Server:connect") {"#{server_name}: #{server}"}
+
+          connection = EventMachine.connect(server.host, server.port, Client, server_name, server.encoding||"UTF-8", server.tls)
+          @@networks[server_name] = connection
+
+          connection.send_data "NICK #{config.user.nick}\r\nUSER #{config.user.user||config.user.nick} 8 * :#{config.user.real}\r\n"
+
+          Hook.call(:connected, server_name)
+          log.info("Server:connect") {"Connected to #{server_name}."}
+        end
+
+        log.info("Server:start") {"Kanzashi started."}
+        Hook.call(:started)
+        Hook.call(:detached, nil)
       end
     end
+
+    @@client_count = 0
+
+    attr_reader :user
 
     def initialize
       Client.add_connection(self)
@@ -29,14 +55,8 @@ module Kanzashi
       @@client_count += 1
     end
 
-    def client?
-      false
-    end
-
-    def server?
-      true
-    end
-
+    def client?; false; end
+    def server?; true; end
     alias from_server? client?
     alias from_client? server?
 
@@ -44,32 +64,6 @@ module Kanzashi
       if config.server.tls # enable TLS
         start_tls(config.server.tls.kind_of?(Hash) ? config.server.tls : {})
       end
-    end
-
-    def self.start_and_connect
-      Plugin.plug_all
-
-      Hook.call(:start)
-      log.info("Server:start") {"Kanzashi starting..."}
-
-      @@networks = {}
-      config.networks.each do |server_name, server|
-        log.info("Server:connect") {"Connecting to #{server_name}..."}
-        Hook.call(:connect, server_name)
-        log.debug("Server:connect") {"#{server_name}: #{server}"}
-
-        connection = EventMachine.connect(server.host, server.port, Client, server_name, server.encoding||"UTF-8", server.tls)
-        @@networks[server_name] = connection
-
-        connection.send_data "NICK #{config.user.nick}\r\nUSER #{config.user.user||config.user.nick} 8 * :#{config.user.real}\r\n"
-
-        Hook.call(:connected, server_name)
-        log.info("Server:connect") {"Connected to #{server_name}."}
-      end
-
-      log.info("Server:start") {"Kanzashi started."}
-      Hook.call(:started)
-      Hook.call(:detached, nil)
     end
 
     def receive_line(line)
@@ -163,11 +157,11 @@ module Kanzashi
       [channel_name, server]
     end
 
-    # send data to specified server
+    # send data to specified IRC server
     def send_server(line)
       params = line.split
       channels = nil
-      channel_pos = params.each.find_index do |param|
+      channel_pos = params.find_index do |param|
         if /#|%|!/ =~ param
           channels = param
           true
@@ -176,8 +170,8 @@ module Kanzashi
         end
       end
       if channels
-        channels.split(",").each do |channel|
-          channel_name, server = split_channel_and_server(channel)
+        channels.split(",").each do |channel_with_host|
+          channel_name, server = split_channel_and_server(channel_with_host)
           params[channel_pos].replace(channel_name)
           server.send_data("#{params.join(" ")}\r\n")
         end
