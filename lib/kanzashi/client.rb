@@ -2,6 +2,7 @@ module Kanzashi
   # a module to communicate with IRC servers as a client
   module Client
     include Kanzashi
+
     class << self
       include UtilMethod
 
@@ -41,16 +42,16 @@ module Kanzashi
 
     # process received data
     def receive_data(data)
-      data.encode!(Encoding::UTF_8, @encoding, EncodeOpt)
       @buffer.extract(data).each do |line|
         line.chomp! # some IRC servers send CR+CR+LF in message of the day
         line.concat(CRLF)
+        line.encode!(Encoding::UTF_8, @encoding, EncodeOpt)
         receive_line(line)
       end
     end
 
     def send_data(data)
-      data.concat(CRLF)
+      data.concat(CRLF) unless data.end_with?(CRLF)
       log.debug("Client #{@server_name}:send_data") { data.inspect }
       data.encode!(@encoding, Encoding::UTF_8, EncodeOpt)
       super
@@ -138,11 +139,11 @@ module Kanzashi
         relay(rewrited_message)
       else
         log.debug("Client #{@server_name}:recv") { line.inspect }
-        m.params[1].force_encoding(Encoding::BINARY)
+        m.params[1].force_encoding(Encoding::BINARY) if m.params[1]
         begin
           relay(channel_rewrite(line)) unless m.ctcp?
         ensure
-          m.params[1].force_encoding(Encoding::UTF_8)
+          m.params[1].force_encoding(Encoding::UTF_8) if m.params[1]
         end
       end
     end
@@ -152,18 +153,16 @@ module Kanzashi
       begin
         params = line.split
       rescue ArgumentError => ex
+        p line
         puts ex.message
       end
-      params.each do |param|
-        if /^:?(#|&)/ =~ param
-          channels = param.split(",")
-          channels.each do |channel|
-            channel.concat(config.separator)
-            channel.concat(@server_name.to_s)
-          end
-          param.replace(channels.join(","))
-          break
+      if channel_param = params.find {|param| /^:?(#|&)/ =~ param }
+        channels = channel_param.split(",")
+        channels.each do |channel|
+          channel.concat(config.separator)
+          channel.concat(@server_name.to_s)
         end
+        channel_param.replace(channels.join(","))
       end
       params.join(" ").concat(CRLF)
     end

@@ -1,6 +1,7 @@
 module Kanzashi
   module Config
     include Kanzashi
+
     DEFAULT = {
       config_file: "config.yml",
       separator: "@",
@@ -19,6 +20,7 @@ module Kanzashi
       networks: {},
       plugins: {}
     }.freeze
+
     @@config = Util::CustomHash.new(DEFAULT)
     @@old_config = nil
 

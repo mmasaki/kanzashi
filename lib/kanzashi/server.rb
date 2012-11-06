@@ -2,6 +2,7 @@ module Kanzashi
   # a module behaves like an IRC server to IRC clients.
   module Server
     include Kanzashi
+
     class << self
       include UtilMethod
 
@@ -68,7 +69,7 @@ module Kanzashi
 
     def send_data(data)
       log.debug("Server:send_data") { data.inspect }
-      data.concat(CRLF)
+      data.concat(CRLF) unless data.end_with?(CRLF)
       super
     end
 
@@ -180,7 +181,7 @@ module Kanzashi
     end
 
     def split_channel_and_server(channel)
-      if /^:?((?:#|%|!).+)#{Regexp.escape(config.separator)}(.+)/ =~ channel
+      if /^:?((?:#|%|!).+)#{Regexp.escape(config.separator)}(.+?)(:.+)?$/ =~ channel
         channel_name = $1
         server = @@networks[$2.to_sym]
       end
