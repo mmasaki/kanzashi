@@ -124,7 +124,7 @@ module Kanzashi
     def receive_data(data)
       data.encode!(Encoding::UTF_8, @encoding, :invalid => :replace)
       @buffer.extract(data).each do |line|
-        line.chomp!
+        line.chomp! # some IRC servers send CR+CR+LF in message of the day
         line.concat("\r\n")
         receive_line(line)
       end
