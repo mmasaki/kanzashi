@@ -78,83 +78,24 @@ module Kanzashi
       @@relay_to.each { |r| r.receive_from_server(data) }
     end
 
-    def receive_line(line)
-      line.force_encoding(Encoding::BINARY)
-      begin
-        m = Net::IRC::Message.parse(line)
-      rescue Net::IRC::Message::InvalidMessage => ex
-        puts ex.message.encode!(Encoding::UTF_8)
-        return
-      end
-      line.force_encoding(Encoding::UTF_8)
-      m.params.each{|x| x.force_encoding(Encoding::UTF_8) }
-      Hook.call(m.command.downcase.to_sym, m, self)
-      Hook.call((m.command.downcase + "_from_server").to_sym, m, self)
-      case m.command
-      when "PING"
-        send_data "PONG #{config.user.nick}" # reply to ping
-      when "JOIN"
-        channel_sym = m[0].to_s.to_sym
-        /^(.+?)(!.+?)?(@.+?)?$/ =~ m.prefix
-        nic = $1
-        if nic == @nick
-          @channels[channel_sym] = { :cache => {}, :names => [] } unless @channels.has_key?(channel_sym)
-        else
-          @channels[channel_sym][:names] << nic
-          relay(channel_rewrite(line))
-        end
-      when "INVITE"
-        if K.config[:others][:join_when_invited]
-          send_data "JOIN #{m[1]}"
-        else
-          log.debug("Client #{@server_name}:recv") { line.inspect }
-          relay(channel_rewrite(line))    
-        end
-      when "NICK"
-        @nick = m[0].to_s if m.prefix.nick == @nick
-        relay(channel_rewrite(line))
-      when "002"
-        config.networks[@server_name].join_to.each do |channel| # join to channel specifed in config file
-          unless /^#/ =~ channel
-            if channel.respond_to?(:prepend)
-              channel.prepend("#")
-            else
-              channel.replace("##{channel}")
-            end
-          end
-          join(channel)
-          sleep 0.2 # to avoid excess flood
-        end
-        Kh.call(:client_welcome, self)
-      when "332", "333", "366" # TODO: Able to refact
-        channel_sym = m[1].to_s.to_sym
-        rewrited_message = channel_rewrite(line)
-        @channels[channel_sym][:cache][m.command.to_sym] = rewrited_message
-        relay(rewrited_message)
-      when "353" # reply to NAMES
-        channel_sym = m[2].to_s.to_sym
-        rewrited_message = channel_rewrite(line)
-        @channels[channel_sym][:cache]["353".to_sym] = rewrited_message
-        @channels[channel_sym][:names] = m[3].to_s.split # make names list
-        relay(rewrited_message)
+    def _join(m, line)
+      channel_sym = m[0].to_s.to_sym
+      /^(.+?)(!.+?)?(@.+?)?$/ =~ m.prefix
+      nic = $1
+      if nic == @nick
+        @channels[channel_sym] = { :cache => {}, :names => [] } unless @channels.has_key?(channel_sym)
       else
-        log.debug("Client #{@server_name}:recv") { line.inspect }
-        m.params[1].force_encoding(Encoding::BINARY) if m.params[1]
-        begin
-          relay(channel_rewrite(line)) unless m.ctcp?
-        ensure
-          m.params[1].force_encoding(Encoding::UTF_8) if m.params[1]
-        end
+        @channels[channel_sym][:names] << nic
+        relay(channel_rewrite(line))
       end
     end
-
+    
     # rewrite channel names for Kanzashi clients
     def channel_rewrite(line)
       begin
         params = line.split
       rescue ArgumentError => ex
-        p line
-        puts ex.message
+        log.error ex.message
       end
       if channel_param = params.find {|param| /^:?(#|&)/ =~ param }
         channels = channel_param.split(",")
@@ -165,6 +106,108 @@ module Kanzashi
         channel_param.replace(channels.join(","))
       end
       params.join(" ").concat(CRLF)
+    end
+
+    def invite(m, line)
+      if K.config[:others][:join_when_invited]
+        send_data "JOIN #{m[1]}"
+      else
+        log.debug("Client #{@server_name}:recv") { line.inspect }
+        relay(channel_rewrite(line))    
+      end
+    end
+
+    def nick(m, line)
+      @nick = m[0].to_s if m.prefix.nick == @nick
+      relay(channel_rewrite(line))
+    end
+
+    # 002: RPL_YOURHOST
+    def your_host
+      config.networks[@server_name].join_to.each do |channel| # join to channel specifed in config file
+        unless /^#/ =~ channel
+          if channel.respond_to?(:prepend) # feature since 1.9.3
+            channel.prepend("#")
+          else
+            channel.replace("##{channel}")
+          end
+        end
+        join(channel)
+        sleep 0.2 # to avoid excess flood
+      end
+      Kh.call(:client_welcome, self)
+    end
+
+    # 353: RPL_NAMREPLY
+    def name_reply(m, line)
+      # reply to names
+      channel_sym = m[2].to_s.to_sym
+      rewrited_message = channel_rewrite(line)
+      @channels[channel_sym][:cache]["353".to_sym] = rewrited_message
+      @channels[channel_sym][:names] = m[3].to_s.split # make names list
+      relay(rewrited_message)
+    end
+
+    def relay_rewrited_message(m, line)
+      channel_sym = m[1].to_s.to_sym
+      rewrited_message = channel_rewrite(line)
+      @channels[channel_sym][:cache][m.command.to_sym] = rewrited_message
+      relay(rewrited_message)
+    end
+
+    def other_messages(m, line)
+      log.debug("Client #{@server_name}:recv") { line.inspect }
+      m.params[1].force_encoding(Encoding::BINARY) if m.params[1]
+      begin
+        relay(channel_rewrite(line)) unless m.ctcp?
+      ensure
+        m.params[1].force_encoding(Encoding::UTF_8) if m.params[1]
+      end
+    end
+
+    def parse_line(line)
+      line.force_encoding(Encoding::BINARY)
+      m = Net::IRC::Message.parse(line)
+      line.force_encoding(Encoding::UTF_8)
+      m.params.each{|x| x.force_encoding(Encoding::UTF_8) }
+      return m
+    rescue Net::IRC::Message::InvalidMessage => ex
+      log.error ex.message.encode!(Encoding::UTF_8)
+      return nil
+    end
+
+    def call_hooks(m)
+      command = m.command.downcase
+      Hook.call(command.to_sym, m, self)
+      Hook.call("#{command}_from_server".to_sym, m, self)
+    end
+
+    def receive_line(line)
+      m = parse_line(line)
+      return unless m
+      call_hooks(m) 
+      case m.command
+      when "PING"
+        send_data "PONG #{config.user.nick}" # reply to ping
+      when "JOIN"
+        _join(m, line)
+      when "INVITE"
+        invite(m, line)
+      when "NICK"
+        nick(m, line)
+      when "002" # RPL_YOURHOST
+        your_host
+      when "332", # RPL_TOPIC
+           "333", 
+           "366"  # RPL_ENDOFNAME
+        relay_rewrited_message(m, line)
+      when "353"
+        name_reply(m, line)
+      else
+        other_messages(m, line)
+      end
+    rescue => ex
+      log.error ex.message
     end
   end
 end
