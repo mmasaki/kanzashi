@@ -55,7 +55,7 @@ module Kanzashi
     include Kanzashi
     class << self; include UtilMethod; end
 
-    DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+    DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S "
 
     @@logger = nil
 
