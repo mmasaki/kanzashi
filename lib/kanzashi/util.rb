@@ -55,12 +55,15 @@ module Kanzashi
     include Kanzashi
     class << self; include UtilMethod; end
 
+    DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+
     @@logger = nil
 
     def self.logger
       unless @@logger
         @@logger = Logger.new(config.log.output||STDOUT)
         @@logger.level = config.log.level if config.log.level
+        @@logger.datetime_format = DATETIME_FORMAT
       end
       @@logger
     end
