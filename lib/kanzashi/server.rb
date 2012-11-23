@@ -93,14 +93,62 @@ module Kanzashi
 
     private
 
-    def receive_line(line)
-      begin
-        m = Net::IRC::Message.parse(line)
-      rescue Net::IRC::Message::InvalidMessage => ex
-        puts ex.message
-        return
+    def user(m)
+      Hook.call(:new_session, self)
+      Hook.call(:attached) if @@client_count == 1
+
+      @user[:username] = m[0].to_s
+      @user[:realname] = m[3].to_s
+      @user[:prefix] = "#{@user[:nick]}!#{@user[:username]}@localhost"
+
+      send_data ":localhost 001 #{@user[:nick]} :Welcome to the Internet Relay Network #{@user[:prefix]}"
+
+      unless @user[:nick] == config.user.nick
+        send_data ":#{@user[:prefix]} NICK #{config.user.nick}"
+        @user[:nick] = config.user.nick
+        @user[:prefix] = "#{@user[:nick]}!#{@user[:username]}@localhost"
       end
-      log.debug("Server:receive_line") {"Received line: #{line.chomp.inspect}"}
+
+      @@networks.each do |name,client|
+        client.channels.each do |channel,v|
+          send_data ":#{@user[:prefix]} JOIN #{channel}#{config.separator}#{name}"
+          v[:cache].each {|k,l| send_data(l.chomp)}
+        end
+      end
+    end
+
+    def _join(m)
+      channels = m[0].split(",")
+      channels.each do |channel|
+        send_data ":#{@user[:prefix]} JOIN #{channel}"
+        channel_name, server = split_channel_and_server(channel)
+        server.join(channel_name)
+      end
+    end
+
+    def quit
+      Hook.call(:quit, self)
+      send_data "ERROR :Closing Link."
+      close_connection_after_writing
+    end
+
+    def parse_line(line)
+      return Net::IRC::Message.parse(line)
+    rescue Net::IRC::Message::InvalidMessage => ex
+      log.error("Server:#{ex.class}") { ex.message }
+      return nil
+    end
+
+    def call_hooks(m)
+      command = m.command.downcase
+      Hook.call(command.to_sym, m, self)
+      Hook.call("#{command}_from_client".to_sym, m, self)
+    end
+
+    def receive_line(line)
+      m = parse_line(line)
+      return unless m
+      log.debug("Server:receive_line") { "Received line: #{line.chomp.inspect}" }
       Hook.call(:receive_line, m,line.chomp)
       if config.server.pass && m.command == "PASS" # authenticate
         @auth = (config.server.pass == Digest::SHA256.hexdigest(m[0].to_s) \
@@ -120,43 +168,15 @@ module Kanzashi
       when "PONG"
         # do nothing
       when "USER"
-        Hook.call(:new_session, self)
-        Hook.call(:attached) if @@client_count == 1
-
-        @user[:username] = m[0].to_s
-        @user[:realname] = m[3].to_s
-        @user[:prefix] = "#{@user[:nick]}!#{@user[:username]}@localhost"
-
-        send_data ":localhost 001 #{@user[:nick]} :Welcome to the Internet Relay Network #{@user[:prefix]}"
-
-        unless @user[:nick] == config.user.nick
-          send_data ":#{@user[:prefix]} NICK #{config.user.nick}"
-          @user[:nick] = config.user.nick
-          @user[:prefix] = "#{@user[:nick]}!#{@user[:username]}@localhost"
-        end
-
-        @@networks.each do |name,client|
-          client.channels.each do |channel,v|
-            send_data ":#{@user[:prefix]} JOIN #{channel}#{config.separator}#{name}"
-            v[:cache].each {|k,l| send_data(l.chomp)}
-          end
-        end
+        user(m)
       when "JOIN"
-        channels = m[0].split(",")
-        channels.each do |channel|
-          send_data ":#{@user[:prefix]} JOIN #{channel}" # in this case, i couldn't join channels with LimeChat
-          channel_name, server = split_channel_and_server(channel)
-          server.join(channel_name)
-        end
+        _join(m)
       when "QUIT"
-        Hook.call(:quit, self)
-        send_data "ERROR :Closing Link."
-        close_connection_after_writing
+        quit
       else
         send_server(line)
       end
-      Hook.call(m.command.downcase.to_sym, m, self)
-      Hook.call((m.command.downcase + "_from_client").to_sym, m, self)
+      call_hooks(m)
     end
 
     # send data to specified IRC server

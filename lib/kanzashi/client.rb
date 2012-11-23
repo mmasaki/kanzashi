@@ -51,9 +51,10 @@ module Kanzashi
     end
 
     def send_data(data)
+      data.force_encoding(Encoding::UTF_8)
       data.concat(CRLF) unless data.end_with?(CRLF)
       log.debug("Client #{@server_name}:send_data") { data.inspect }
-      data.encode!(@encoding, Encoding::UTF_8, EncodeOpt)
+      data.encode!(@encoding, EncodeOpt)
       super
     end
 
