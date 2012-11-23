@@ -55,7 +55,7 @@ module Kanzashi
     include Kanzashi
     class << self; include UtilMethod; end
 
-    DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S "
+    DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
     @@logger = nil
 
@@ -63,7 +63,11 @@ module Kanzashi
       unless @@logger
         @@logger = Logger.new(config.log.output||STDOUT)
         @@logger.level = config.log.level if config.log.level
-        @@logger.datetime_format = DATETIME_FORMAT
+        @@logger.formatter = lambda do |level, time, prog_name, message|
+          time = time.strftime(DATETIME_FORMAT)
+          level = level.ljust(5)
+          "[#{time}] #{level} - #{prog_name}: #{message}\n"
+        end
       end
       @@logger
     end
