@@ -25,7 +25,7 @@ module Kanzashi
 
         @@networks = {}
         config.networks.each do |server_name, server|
-          log.info("Server:connect") { "Connecting to #{server_name}..." }
+          log.info("Server:connect") { "Connecting to #{server_name}..."  }
           Hook.call(:connect, server_name)
           log.debug("Server:connect") { "#{server_name}: #{server}" }
 

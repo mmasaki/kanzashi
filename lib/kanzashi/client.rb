@@ -95,7 +95,7 @@ module Kanzashi
       begin
         params = line.split
       rescue ArgumentError => ex
-        log.error ex.message
+        log.error("Client") { ex.message }
       end
       if channel_param = params.find {|param| /^:?(#|&)/ =~ param }
         channels = channel_param.split(",")
@@ -172,7 +172,7 @@ module Kanzashi
       m.params.each{|x| x.force_encoding(Encoding::UTF_8) }
       return m
     rescue Net::IRC::Message::InvalidMessage => ex
-      log.error ex.message.encode!(Encoding::UTF_8)
+      log.error("Client:#{ex.class}") { ex.message.encode!(Encoding::UTF_8) }
       return nil
     end
 
@@ -203,11 +203,11 @@ module Kanzashi
         relay_rewrited_message(m, line)
       when "353"
         name_reply(m, line)
-      else
+      else # all other messages
         other_messages(m, line)
       end
     rescue => ex
-      log.error ex.message
+      log.error("Client:#{ex.class}") { ex.message }
     end
   end
 end
