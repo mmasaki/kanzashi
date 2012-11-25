@@ -74,6 +74,7 @@ module Kanzashi
     end
 
     def receive_data(data)
+      data.force_encoding(Encoding::UTF_8)
       @buffer.extract(data).each do |line|
         line.concat(CRLF)
         receive_line(line)
@@ -87,11 +88,29 @@ module Kanzashi
       Hook.call(:detached, self) if @@client_count.zero?
     end
 
-    def receive_from_server(data)
-      send_data(data)
-    end
+    alias receive_from_server send_data
 
     private
+
+    def pass(m)
+      if config.server.pass
+        pass = m[0].to_s
+        hexdigest = Digest::SHA256.hexdigest(pass)
+        case config.server.pass
+        when hexdigest, pass
+          @auth = true
+        end
+      else # the case where the user has not specified password
+        @auth = true
+      end
+      nil
+    end
+
+    def bad_password
+      Hook.call(:bad_password, self)
+      send_data "ERROR :Bad password?"
+      close_connection_after_writing
+    end
 
     def user(m)
       Hook.call(:new_session, self)
@@ -133,7 +152,11 @@ module Kanzashi
     end
 
     def parse_line(line)
-      return Net::IRC::Message.parse(line)
+      line.force_encoding(Encoding::BINARY)
+      m = Net::IRC::Message.parse(line)
+      line.force_encoding(Encoding::UTF_8)
+      m.params.each{|x| x.force_encoding(Encoding::UTF_8) }
+      return m
     rescue Net::IRC::Message::InvalidMessage => ex
       log.error("Server:#{ex.class}") { ex.message }
       return nil
@@ -150,18 +173,10 @@ module Kanzashi
       return unless m
       log.debug("Server:receive_line") { "Received line: #{line.chomp.inspect}" }
       Hook.call(:receive_line, m,line.chomp)
-      if config.server.pass && m.command == "PASS" # authenticate
-        @auth = (config.server.pass == Digest::SHA256.hexdigest(m[0].to_s) \
-              || config.server.pass == m[0].to_s)
-      else # the case where the user has not specified password
-        @auth = true
-      end
-      unless @auth # Without authentication, it is needed to refuse all message except PASS
-        Hook.call(:bad_password, self)
-        send_data "ERROR :Bad password?"
-        close_connection_after_writing
-      end
+      bad_password unless @auth || m.command == "PASS"
       case m.command
+      when "PASS"
+        pass(m)
       when "NICK"
         @@networks.each_value {|n| n.nick = m[0].to_s } if @user[:nick]
         @user[:nick] = m[0].to_s
@@ -179,18 +194,18 @@ module Kanzashi
       call_hooks(m)
     end
 
+    # find channel param pos
+    def find_channel_pos(params)
+      params.each_with_index do |param, pos|
+        return [param, pos] if /#|%|!/ =~ param
+      end
+      false
+    end
+
     # send data to specified IRC server
     def send_server(line)
       params = line.split
-      channels = nil
-      channel_pos = params.find_index do |param|
-        if /#|%|!/ =~ param
-          channels = param
-          true
-        else
-          false
-        end
-      end
+      channels, channel_pos = find_channel_pos(params)
       if channels
         channels.split(",").each do |channel_with_host|
           channel_name, server = split_channel_and_server(channel_with_host)
@@ -201,8 +216,9 @@ module Kanzashi
     end
 
     def split_channel_and_server(channel)
-      if /^:?((?:#|%|!).+)#{Regexp.escape(config.separator)}(.+?)(:.+)?$/ =~ channel
+      if /^:?((?:#|!).+)#{Regexp.escape(config.separator)}(.+?)(:.+)?$/ =~ channel
         channel_name = $1
+        channel_name.concat($3.to_s) if $3
         server = @@networks[$2.to_sym]
       end
       unless server # in cases where the user specifies invaild server

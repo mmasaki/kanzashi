@@ -100,9 +100,12 @@ module Kanzashi
       end
       if channel_param = params.find {|param| /^:?(#|&)/ =~ param }
         channels = channel_param.split(",")
-        channels.each do |channel|
+        channels.map! do |channel|
+          channel, host = channel.split(":") # maybe "#ruby:*jp" given
           channel.concat(config.separator)
           channel.concat(@server_name.to_s)
+          channel.concat(":#{host}") if host
+          channel
         end
         channel_param.replace(channels.join(","))
       end
