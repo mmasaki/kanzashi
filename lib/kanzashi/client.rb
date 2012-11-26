@@ -83,11 +83,15 @@ module Kanzashi
       @@relay_to.each { |r| r.receive_from_server(data) }
     end
 
+    # true if the message is echo of mine
+    def of_mine?(m)
+      /^(.+?)(!.+?)?(@.+?)?$/ =~ m.prefix
+      @nick == $1
+    end
+
     def _join(m, line)
       channel_sym = m[0].to_s.to_sym
-      /^(.+?)(!.+?)?(@.+?)?$/ =~ m.prefix
-      nic = $1
-      if nic == @nick # join of myself
+      if of_mine?(m)
         @channels[channel_sym] = { :cache => {}, :names => [] } unless @channels.has_key?(channel_sym)
       else
         @channels[channel_sym][:names] << nic
@@ -96,9 +100,7 @@ module Kanzashi
     end
 
     def part(m, line)
-      /^(.+?)(!.+?)?(@.+?)?$/ =~ m.prefix
-      nic = $1
-      if nic == @nick # part of myself
+      if of_mine?(m)
         channel_sym = m[0].to_s.to_sym
         @channels.delete(channel_sym)
       end
@@ -143,12 +145,9 @@ module Kanzashi
     # 002: RPL_YOURHOST
     def your_host
       config.networks[@server_name].join_to.each do |channel| # join to channel specifed in config file
-        unless /^#/ =~ channel
-          if channel.respond_to?(:prepend) # feature since 1.9.3
-            channel.prepend("#")
-          else
-            channel.replace("##{channel}")
-          end
+        unless channel.start_with?("#")
+          # String#prepend is a feature since 1.9.3
+          channel.prepend("#") rescue channel.replace("##{channel}")
         end
         join(channel)
         sleep 0.2 # to avoid excess flood
