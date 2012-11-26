@@ -45,7 +45,7 @@ plugins:
   log:
     enabled: false
     # whether or not to keep log files open
-    keep-file-open: true
+    keep_file_open: true
     # directory to record logs
     directory: log
     # format of every lines' header. if omitted, Kanzashi uses "%H:%M".
@@ -53,11 +53,11 @@ plugins:
     # mode of log files. default value is 0600.
     mode: 0600
     # mode of directory. default value is 0700.
-    dir-mode: 0700
+    dir_mode: 0700
     # mask for command to record logs. if omitted, Kanzashi records about all channels.
     command: privmsg,join,part,kick,invite,mode,nick,quit,kill,topic,notice
     # whether or not to change formats when your own messages in PRIVMSG/NOTICE. default value is true.
-    distinguish-myself: true
+    distinguish_myself: true
     # regular expression to specify channels to record. if omitted, Kanzashi records about all channels.
     channel:
   log_recent: # send recent log
