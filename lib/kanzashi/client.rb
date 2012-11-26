@@ -160,7 +160,8 @@ module Kanzashi
       # reply to names
       channel_pos = 2
       relay_with_cache(m, channel_pos, line)
-      @channels[channel_sym][:names] = m[3].to_s.split # make names list
+      channel_sym = m[channel_pos].to_s.to_sym
+      @channels[channel_sym][:names] = m[3].to_s.split # cache names list
     end
 
     # relay message with cache
