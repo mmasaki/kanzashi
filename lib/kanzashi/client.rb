@@ -137,7 +137,7 @@ module Kanzashi
       end
     end
 
-    def nick(m, line)
+    def _nick(m, line)
       @nick = m[0].to_s if m.prefix.nick == @nick
       relay(channel_rewrite(line))
     end
@@ -212,7 +212,7 @@ module Kanzashi
       when "INVITE"
         invite(m, line)
       when "NICK"
-        nick(m, line)
+        _nick(m, line)
       when "002" # RPL_YOURHOST
         your_host
       when "332", # RPL_TOPIC
