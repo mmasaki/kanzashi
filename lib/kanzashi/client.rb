@@ -10,6 +10,10 @@ module Kanzashi
       def add_connection(connection)
         @@relay_to << connection
       end
+
+      def del_connection(connection)
+        @@relay_to.delete(connection)
+      end
     end
 
     @@relay_to = [] # an array includes connections to relay

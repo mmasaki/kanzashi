@@ -83,6 +83,7 @@ module Kanzashi
 
     # if detached, call Hook.detached.
     def unbind
+      Client.del_connection(self)
       @@client_count -= 1
       Hook.call(:unbind, self)
       Hook.call(:detached, self) if @@client_count.zero?
