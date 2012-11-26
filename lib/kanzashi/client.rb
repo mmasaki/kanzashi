@@ -83,24 +83,24 @@ module Kanzashi
       @@relay_to.each { |r| r.receive_from_server(data) }
     end
 
-    # true if the message is echo of mine
-    def of_mine?(m)
+    def message_nick(m)
       /^(.+?)(!.+?)?(@.+?)?$/ =~ m.prefix
-      @nick == $1
+      $1.to_s
     end
 
     def _join(m, line)
       channel_sym = m[0].to_s.to_sym
-      if of_mine?(m)
+      m_nick = message_nick(m)
+      if m_nick == @nick # join of myself
         @channels[channel_sym] = { :cache => {}, :names => [] } unless @channels.has_key?(channel_sym)
       else
-        @channels[channel_sym][:names] << nic
+        @channels[channel_sym][:names] << m_nick
         relay(channel_rewrite(line))
       end
     end
 
     def part(m, line)
-      if of_mine?(m)
+      if message_nick(m) == @nick # part of myself
         channel_sym = m[0].to_s.to_sym
         @channels.delete(channel_sym)
       end
