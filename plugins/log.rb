@@ -20,7 +20,7 @@ class Kanzashi::Plugin::Log
 
   def puts(str, dst)
     if !@channel || @channel =~ dst
-      str.replace("#{Time.now.strftime(K.c[:header])} #{str}")
+      str.replace("#{Time.now.strftime(@header)} #{str}")
       STDOUT.puts(str)
       if @keep_file_open
         @logfiles[dst.to_sym].puts(str)
