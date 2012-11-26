@@ -112,7 +112,7 @@ module Kanzashi
       close_connection_after_writing
     end
 
-    def user(m)
+    def _user(m)
       Hook.call(:new_session, self)
       Hook.call(:attached) if @@client_count == 1
 
@@ -183,7 +183,7 @@ module Kanzashi
       when "PONG"
         # do nothing
       when "USER"
-        user(m)
+        _user(m)
       when "JOIN"
         _join(m)
       when "QUIT"
