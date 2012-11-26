@@ -87,12 +87,22 @@ module Kanzashi
       channel_sym = m[0].to_s.to_sym
       /^(.+?)(!.+?)?(@.+?)?$/ =~ m.prefix
       nic = $1
-      if nic == @nick
+      if nic == @nick # join of myself
         @channels[channel_sym] = { :cache => {}, :names => [] } unless @channels.has_key?(channel_sym)
       else
         @channels[channel_sym][:names] << nic
         relay(channel_rewrite(line))
       end
+    end
+
+    def part(m, line)
+      /^(.+?)(!.+?)?(@.+?)?$/ =~ m.prefix
+      nic = $1
+      if nic == @nick # part of myself
+        channel_sym = m[0].to_s.to_sym
+        @channels.delete(channel_sym)
+      end
+      other_messages(m, line)
     end
     
     # rewrite channel names for Kanzashi clients
@@ -149,15 +159,14 @@ module Kanzashi
     # 353: RPL_NAMREPLY
     def name_reply(m, line)
       # reply to names
-      channel_sym = m[2].to_s.to_sym
-      rewrited_message = channel_rewrite(line)
-      @channels[channel_sym][:cache]["353".to_sym] = rewrited_message
+      channel_pos = 2
+      relay_with_cache(m, channel_pos, line)
       @channels[channel_sym][:names] = m[3].to_s.split # make names list
-      relay(rewrited_message)
     end
 
-    def relay_rewrited_message(m, line)
-      channel_sym = m[1].to_s.to_sym
+    # relay message with cache
+    def relay_with_cache(m, channel_pos, line)
+      channel_sym = m[channel_pos].to_s.to_sym
       rewrited_message = channel_rewrite(line)
       @channels[channel_sym][:cache][m.command.to_sym] = rewrited_message
       relay(rewrited_message)
@@ -199,6 +208,8 @@ module Kanzashi
         send_data "PONG #{config.user.nick}" # reply to ping
       when "JOIN"
         _join(m, line)
+      when "PART"
+        part(m, line)
       when "INVITE"
         invite(m, line)
       when "NICK"
@@ -208,7 +219,8 @@ module Kanzashi
       when "332", # RPL_TOPIC
            "333", 
            "366"  # RPL_ENDOFNAME
-        relay_rewrited_message(m, line)
+        channel_pos = 1
+        relay_with_cache(m, channel_pos, line)
       when "353"
         name_reply(m, line)
       else # all other messages

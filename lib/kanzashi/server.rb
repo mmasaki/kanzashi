@@ -61,10 +61,16 @@ module Kanzashi
     alias from_server? client?
     alias from_client? server?
 
+    def inspect
+      super unless @user_ip
+      "#<Server: @user_ip=#{@user_ip}>"
+    end
+
     def post_init
       if config.server.tls # enable TLS
         start_tls(config.server.tls.kind_of?(Hash) ? config.server.tls : {})
       end
+      @user_ip, = Socket.unpack_sockaddr_in(get_peername)
     end
 
     def send_data(data)
