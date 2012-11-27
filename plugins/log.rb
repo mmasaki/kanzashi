@@ -55,11 +55,7 @@ end
 Kh.join do |m, receiver|
   if receiver.from_server?
     nick = m.prefix.nick
-    channel, host = m[0].to_s.split(":")
-    channel_name = channel
-    channel_name.concat("@") # TODO: load global config
-    channel_name.concat(host) if host
-    channel_name.concat(receiver.server_name)
+    channel_name = Kh.channel_rewrite(m[0], receiver.server_name)
     if nick == receiver.nick # Kanzashi's join
       @log.add_dst(channel_name) if @log.keep_file_open
     elsif @log.record?(:join) # others join
@@ -84,7 +80,7 @@ end
 
 Kh.kick_from_server do |m, receiver|
   if @log.record?(:kick)
-    channel_name = "#{m[0]}@#{receiver.server_name}"
+    channel_name = Kh.channel_rewrite(m[0], receiver.server_name)
     @log.puts("- #{m[1]} by #{m.prefix.nick} from #{channel_name} (#{m[2]})", channel_name)
   end
 end
@@ -138,14 +134,14 @@ end
 
 Kh.invite_from_server do |m, receiver|
   if @log.record?(:invite)
-    channel_name = "#{m[1]}@#{receiver.server_name}"
+    channel_name = Kh.channel_rewrite(m[1], receiver.server_name)
     @log.puts("Invited by #{m[0]}: #{channel_name}", channel_name) 
   end
 end
 
 Kh.topic_from_server do |m, receiver|
   if @log.record?(:topic)
-    channel_name = "#{m[0]}@#{receiver.server_name}"
+    channel_name = Kh.channel_rewrite(m[0], receiver.server_name)
     @log.puts("Topic of channel #{channel_name} by #{m.prefix.nick}: #{m[1]}", channel_name)
   end
 end
