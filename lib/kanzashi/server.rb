@@ -180,7 +180,7 @@ module Kanzashi
       return unless m
       log.debug("Server:receive_line") { "Received line: #{line.chomp.inspect}" }
       Hook.call(:receive_line, m,line.chomp)
-      bad_password unless @auth || m.command == "PASS"
+      bad_password if !@auth && m.command != "PASS"
       case m.command
       when "PASS"
         pass(m)

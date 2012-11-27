@@ -220,11 +220,11 @@ module Kanzashi
       when "002" # RPL_YOURHOST
         your_host
       when "332", # RPL_TOPIC
-           "333", 
+           "333", # RPL_TOPICWHOTIME
            "366"  # RPL_ENDOFNAME
         channel_pos = 1
         relay_with_cache(m, channel_pos, line)
-      when "353"
+      when "353"  # RPL_NAMREPLY
         name_reply(m, line)
       else # all other messages
         other_messages(m, line)
