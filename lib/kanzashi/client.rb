@@ -71,7 +71,9 @@ module Kanzashi
       log.debug("Client #{@server_name}:join") { channel_name }
       channel_sym = channel_name.to_sym
       if @channels.has_key?(channel_sym) # cases that kanzashi already joined specifed channnel
-        @channels[channel_sym][:cache].each_value {|line| relay(line) } # send cached who list
+        @channels[channel_sym][:cache].each_value do |messages|
+          messages.each {|message| relay(message) }
+        end # send cached message
       else # cases that kanzashi hasn't joined specifed channnel yet
         send_data "JOIN #{channel_name}"
       end
@@ -168,7 +170,8 @@ module Kanzashi
     def relay_with_cache(m, channel_pos, line)
       channel_sym = m[channel_pos].to_s.to_sym
       rewrited_message = channel_rewrite(line)
-      @channels[channel_sym][:cache][m.command.to_sym] = rewrited_message
+      @channels[channel_sym][:cache][m.command.to_sym] ||= []
+      @channels[channel_sym][:cache][m.command.to_sym] << rewrited_message
       relay(rewrited_message)
     end
 
