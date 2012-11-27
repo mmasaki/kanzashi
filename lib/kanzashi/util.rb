@@ -49,6 +49,15 @@ module Kanzashi
     def log
       Log.logger
     end
+
+    # rewrite channel_name "#hoge:*jp" #=> "#hoge@example.com:*.jp"
+    def channel_rewrite(channel_name, server_name)
+      channel, host = channel_name.split(":") # maybe "#ruby:*jp" given
+      channel.concat(config.separator)
+      channel.concat(server_name.to_s) # server_name may be Symbol
+      channel.concat(":#{host}") if host
+      channel
+    end
   end
 
   class Log

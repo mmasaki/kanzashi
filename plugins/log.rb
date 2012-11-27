@@ -55,7 +55,11 @@ end
 Kh.join do |m, receiver|
   if receiver.from_server?
     nick = m.prefix.nick
-    channel_name = "#{m[0]}@#{receiver.server_name}"
+    channel, host = m[0].to_s.split(":")
+    channel_name = channel
+    channel_name.concat("@") # TODO: load global config
+    channel_name.concat(host) if host
+    channel_name.concat(receiver.server_name)
     if nick == receiver.nick # Kanzashi's join
       @log.add_dst(channel_name) if @log.keep_file_open
     elsif @log.record?(:join) # others join

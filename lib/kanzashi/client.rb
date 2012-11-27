@@ -97,7 +97,7 @@ module Kanzashi
         @channels[channel_sym] = { :cache => {}, :names => [] } unless @channels.has_key?(channel_sym)
       else
         @channels[channel_sym][:names] << m_nick
-        relay(channel_rewrite(line))
+        relay(message_rewrite(line))
       end
     end
 
@@ -110,7 +110,7 @@ module Kanzashi
     end
     
     # rewrite channel names for Kanzashi clients
-    def channel_rewrite(line)
+    def message_rewrite(line)
       begin
         params = line.split
       rescue ArgumentError => ex
@@ -119,11 +119,7 @@ module Kanzashi
       if channel_param = params.find {|param| /^:?(#|&)/ =~ param }
         channels = channel_param.split(",")
         channels.map! do |channel|
-          channel, host = channel.split(":") # maybe "#ruby:*jp" given
-          channel.concat(config.separator)
-          channel.concat(@server_name.to_s)
-          channel.concat(":#{host}") if host
-          channel
+          channel_rewrite(channel, @server_name)
         end
         channel_param.replace(channels.join(","))
       end
@@ -135,13 +131,13 @@ module Kanzashi
         send_data "JOIN #{m[1]}"
       else
         log.debug("Client #{@server_name}:recv") { line.inspect }
-        relay(channel_rewrite(line))    
+        relay(message_rewrite(line))
       end
     end
 
     def _nick(m, line)
       @nick = m[0].to_s if m.prefix.nick == @nick
-      relay(channel_rewrite(line))
+      relay(message_rewrite(line))
     end
 
     # 002: RPL_YOURHOST
@@ -169,7 +165,7 @@ module Kanzashi
     # relay message with cache
     def relay_with_cache(m, channel_pos, line)
       channel_sym = m[channel_pos].to_s.to_sym
-      rewrited_message = channel_rewrite(line)
+      rewrited_message = message_rewrite(line)
       @channels[channel_sym][:cache][m.command.to_sym] ||= []
       @channels[channel_sym][:cache][m.command.to_sym] << rewrited_message
       relay(rewrited_message)
@@ -179,7 +175,7 @@ module Kanzashi
       log.debug("Client #{@server_name}:recv") { line.inspect }
       m.params[1].force_encoding(Encoding::BINARY) if m.params[1]
       begin
-        relay(channel_rewrite(line)) unless m.ctcp?
+        relay(message_rewrite(line)) unless m.ctcp?
       ensure
         m.params[1].force_encoding(Encoding::UTF_8) if m.params[1]
       end
