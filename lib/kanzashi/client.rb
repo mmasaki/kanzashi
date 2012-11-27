@@ -226,7 +226,7 @@ module Kanzashi
         other_messages(m, line)
       end
     rescue => ex
-      log.error("Client:#{ex.class}") { ex.message }
+      log.error("Client:#{ex.class}") { ex.message + ex.backtrace[0, 2].join(", ") }
     end
   end
 end
