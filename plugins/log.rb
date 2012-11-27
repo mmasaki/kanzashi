@@ -68,13 +68,15 @@ end
 
 Kh.part_from_server do |m, receiver|
   if @log.record?(:part)
-    @log.puts("- #{m.prefix.nick} (\"#{m[1]}\")", "#{m[0]}@#{receiver.server_name}")
+    channel_name = Kh.channel_rewrite(m[0], receiver.server_name)
+    @log.puts("- #{m.prefix.nick} (\"#{m[1]}\")", channel_name)
   end
 end
 
 Kh.quit_from_server do |m, receiver|
   if @log.record?(:quit)
-    @log.puts("! #{m.prefix.nick} (\"#{m[1]}\")", "#{m[0]}@#{receiver.server_name}")
+    channel_name = Kh.channel_rewrite(m[0], receiver.server_name)
+    @log.puts("! #{m.prefix.nick} (\"#{m[1]}\")", channel_name)
   end
 end
 
@@ -86,21 +88,23 @@ Kh.kick_from_server do |m, receiver|
 end
 
 Kh.mode_from_server do |m, receiver|
-  if @log.record?(:mode) && /^(#|&).+$/ =~ m[0].to_s # to avoid usermode MODE messages
-    @log.puts("Mode by #{m.prefix.nick}: #{m[0]} #{m[1]} #{m[2]}", "#{m[0]}@#{receiver.server_name}")
+  if @log.record?(:mode) && /^(#|&).+$/ =~ m[0] # to avoid usermode MODE messages
+    channel_name = Kh.channel_rewrite(m[0], receiver.server_name)
+    @log.puts("Mode by #{m.prefix.nick}: #{m[0]} #{m[1]} #{m[2]}", channel_name)
   end
 end
 
 Kh.privmsg do |m, receiver|
   if @log.record?(:privmsg) && !m.ctcp?
     if receiver.from_server?
+      channel_name = Kh.channel_rewrite(m[0], receiver.server_name)
       if @log.distinguish_myself
-        @log.puts(">#{m[0]}:#{m.prefix.nick}< #{m[1]}", "#{m[0]}@#{receiver.server_name}")
+        @log.puts(">#{m[0]}:#{m.prefix.nick}< #{m[1]}", channel_name)
       else
-        @log.puts("<#{m[0]}:#{m.prefix.nick}> #{m[1]}", "#{m[0]}@#{receiver.server_name}")    
+        @log.puts("<#{m[0]}:#{m.prefix.nick}> #{m[1]}", channel_name)
       end
     else # from Kanzashi's client
-      @log.puts(">#{m[0]}:#{receiver.user[:nick]}< #{m[1]}", m[0].to_s)
+      @log.puts(">#{m[0]}:#{receiver.user[:nick]}< #{m[1]}", m[0])
     end
   end
 end
@@ -110,7 +114,7 @@ Kh.notice do |m, receiver|
   if @log.record?(:notice) && !m.ctcp?
     if receiver.from_server?
       if channel_name != "*" && channel_name != receiver.nick
-        channel_name.concat("@#{receiver.server_name}")
+        channel_name = Kh.channel_rewrite(channel_name, receiver.server_name)
         if @log.distinguish_myself
           @log.puts(")#{channel_name}:#{m.prefix.nick}(#{m[1]}", channel_name)
         else
