@@ -127,6 +127,7 @@ module Kanzashi
       @user[:realname] = m[3].to_s
       @user[:prefix] = "#{@user[:nick]}!#{@user[:username]}@localhost"
 
+      # 001: RPL_WELCOME
       send_data ":localhost 001 #{@user[:nick]} :Welcome to the Internet Relay Network #{@user[:prefix]}"
 
       unless @user[:nick] == config.user.nick
@@ -135,10 +136,12 @@ module Kanzashi
         @user[:prefix] = "#{@user[:nick]}!#{@user[:username]}@localhost"
       end
 
-      @@networks.each do |name,client|
-        client.channels.each do |channel,v|
+      @@networks.each do |name, client|
+        client.channels.each do |channel, cache_and_names|
           send_data ":#{@user[:prefix]} JOIN #{channel}#{config.separator}#{name}"
-          v[:cache].each {|k,l| send_data(l.chomp)}
+          cache_and_names[:cache].each_value do |messages|
+            messages.each {|line| send_data(line) }
+          end
         end
       end
     end
