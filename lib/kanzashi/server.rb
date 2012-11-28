@@ -225,7 +225,7 @@ module Kanzashi
       end
     end
 
-    def split_channel_and_server(channel)
+    def split_channel_and_server(channel_with_host)
       if /^:?((?:#|!).+)#{Regexp.escape(config.separator)}(.+?)(:.+)?$/ =~ channel
         channel_name = $1
         channel_name.concat($3.to_s) if $3
