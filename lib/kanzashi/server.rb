@@ -138,7 +138,7 @@ module Kanzashi
 
       @@networks.each do |name, client|
         client.channels.each do |channel, cache_and_names|
-          send_data ":#{@user[:prefix]} JOIN #{channel}#{config.separator}#{name}"
+          send_data ":#{@user[:prefix]} JOIN #{channel}"
           cache_and_names[:cache].each_value do |messages|
             messages.each {|line| send_data(line) }
           end
@@ -148,11 +148,18 @@ module Kanzashi
 
     def _join(m)
       channels = m[0].split(",")
-      channels.each do |channel|
-        send_data ":#{@user[:prefix]} JOIN #{channel}"
-        channel_name, server = split_channel_and_server(channel)
-        server.join(channel_name)
+      channels.each do |channel_with_host|
+        send_data ":#{@user[:prefix]} JOIN #{channel_with_host}"
+        channel_name, server = split_channel_and_server(channel_with_host)
+        server.join(channel_with_host, channel_name)
       end
+    end
+
+    def part(m, line)
+      channel_with_host = m[0]
+      channel_name, server = split_channel_and_server(channel_with_host)
+      send_server(line)
+      server.part(channel_with_host.to_sym)
     end
 
     def quit
@@ -196,6 +203,8 @@ module Kanzashi
         _user(m)
       when "JOIN"
         _join(m)
+      when "PART"
+        part(m, line)
       when "QUIT"
         quit
       else
@@ -226,13 +235,12 @@ module Kanzashi
     end
 
     def split_channel_and_server(channel_with_host)
-      if /^:?((?:#|!).+)#{Regexp.escape(config.separator)}(.+?)(:.+)?$/ =~ channel
+      if /^:?((?:#|!).+)#{Regexp.escape(config.separator)}(.+?)(:.+)?$/ =~ channel_with_host
         channel_name = $1
         channel_name.concat($3.to_s) if $3
         server = @@networks[$2.to_sym]
       end
       unless server # in cases where the user specifies invaild server
-        channel_name = channel
         server = @@networks.first[1] # the first connection of servers list
       end
       [channel_name, server]

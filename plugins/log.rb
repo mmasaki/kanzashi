@@ -22,7 +22,8 @@ class Kanzashi::Plugin::Log
     if !@channel || @channel =~ dst
       str.replace("#{Time.now.strftime(@header)} #{str}")
       STDOUT.puts(str)
-      if @keep_file_open
+      if @keep_file_opena
+        p dst
         @logfiles[dst.to_sym].puts(str)
       else
         path = "#{@directory}/#{dst}/#{Time.now.strftime(@filename)}"
@@ -39,7 +40,7 @@ class Kanzashi::Plugin::Log
 
   def add_dst(channel_name)
     key = channel_name.to_sym
-    @logfiles[key] = self.file_open(channel_name) unless @logfiles.has_key?(key)
+    @logfiles[key] = file_open(channel_name) unless @logfiles.has_key?(key)
   end
 
   # whether or not to record

@@ -67,9 +67,9 @@ module Kanzashi
       send_data "NICK #{new_nick}"
     end
 
-    def join(channel_name)
+    def join(channel_with_host, channel_name)
       log.debug("Client #{@server_name}:join") { channel_name }
-      channel_sym = channel_name.to_sym
+      channel_sym = channel_with_host.to_sym
       if @channels.has_key?(channel_sym) # cases that kanzashi already joined specifed channnel
         @channels[channel_sym][:cache].each_value do |messages|
           messages.each {|message| relay(message) }
@@ -77,6 +77,10 @@ module Kanzashi
       else # cases that kanzashi hasn't joined specifed channnel yet
         send_data "JOIN #{channel_name}"
       end
+    end
+
+    def part(channel_sym)
+      @channels.delete(channel_sym)
     end
 
     private
@@ -91,22 +95,14 @@ module Kanzashi
     end
 
     def _join(m, line)
-      channel_sym = m[0].to_s.to_sym
       m_nick = message_nick(m)
+      channel_sym = channel_rewrite(m[0], @server_name).to_sym
       if m_nick == @nick # join of myself
         @channels[channel_sym] = { :cache => {}, :names => [] } unless @channels.has_key?(channel_sym)
       else
         @channels[channel_sym][:names] << m_nick
         relay(message_rewrite(line))
       end
-    end
-
-    def part(m, line)
-      if message_nick(m) == @nick # part of myself
-        channel_sym = m[0].to_s.to_sym
-        @channels.delete(channel_sym)
-      end
-      other_messages(m, line)
     end
     
     # rewrite channel names for Kanzashi clients
@@ -164,7 +160,7 @@ module Kanzashi
 
     # relay message with cache
     def relay_with_cache(m, channel_pos, line)
-      channel_sym = m[channel_pos].to_s.to_sym
+      channel_sym = channel_rewrite(m[channel_pos], @server_name).to_sym
       rewrited_message = message_rewrite(line)
       @channels[channel_sym][:cache][m.command.to_sym] ||= []
       @channels[channel_sym][:cache][m.command.to_sym] << rewrited_message
@@ -207,8 +203,6 @@ module Kanzashi
         send_data "PONG #{config.user.nick}" # reply to ping
       when "JOIN"
         _join(m, line)
-      when "PART"
-        part(m, line)
       when "INVITE"
         invite(m, line)
       when "NICK"
