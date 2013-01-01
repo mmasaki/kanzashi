@@ -3,6 +3,15 @@ module Kanzashi
   module Server
     include Kanzashi
 
+    module Hook # for compatibility
+      module_function
+
+      def call(name, *args)
+        Plugin::Server.call_hooks(name, *args)
+        ::Kanzashi::Hook.call(name, *args)
+      end
+    end
+
     class << self
       include UtilMethod
 

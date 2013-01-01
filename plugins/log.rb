@@ -1,5 +1,7 @@
 #encoding: utf-8
 
+require "date"
+
 class Kanzashi::Plugin::Log
   def initialize
     @directory = K.c[:directory] || "log"
@@ -18,24 +20,35 @@ class Kanzashi::Plugin::Log
 
   attr_reader :keep_file_open, :distinguish_myself
 
+  def path(dst)
+    "#{@directory}/#{dst}/#{Date.today.strftime(@filename)}"
+  end
+
+  def rotate(dst)
+    dst = dst.to_sym
+    if path(dst) != @logfiles[dst].path
+      @logfiles[dst].close
+      @logfiles[dst] = File.open(path(dst), "a", @mode) { |f| f.puts(str) }
+    end
+  end
+
   def puts(str, dst)
     if !@channel || @channel =~ dst
       str.replace("#{Time.now.strftime(@header)} #{str}")
       STDOUT.puts(str)
-      if @keep_file_opena
-        p dst
+      if @keep_file_open
+        rotate(dst)
         @logfiles[dst.to_sym].puts(str)
       else
-        path = "#{@directory}/#{dst}/#{Time.now.strftime(@filename)}"
-        File.open(path, "a", @mode) { |f| f.puts(str) }
+        File.open(path(dst), "a", @mode) { |f| f.puts(str) }
       end
     end
   end
 
   def file_open(dst)
-    dst.replace("#{@directory}/#{dst}")
-    Dir.mkdir(dst, @dir_mode) unless File.directory?(dst)
-    File.open("#{dst}/#{Time.now.strftime(@filename)}", "a", @mode)
+    dir = "#{@directory}/#{dst}"
+    Dir.mkdir(dir, @dir_mode) unless File.directory?(dir)
+    File.open(path(dst), "a", @mode)
   end
 
   def add_dst(channel_name)
@@ -46,6 +59,11 @@ class Kanzashi::Plugin::Log
   # whether or not to record
   def record?(command)
     !@command || @command.include?(command)
+  end
+end
+
+module Kanzashi::Plugin::Server
+  on :join do
   end
 end
 
