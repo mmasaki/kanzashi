@@ -65,8 +65,8 @@ module Kanzashi
       end
 
       def call_hooks(namespace, name, *args)
-        hooks_to_call = @@hooks[namespace][name.to_sym]
-        hooks_to_call.concat(@@hooks[:global][name.to_sym]) if namespace != :global
+        hooks_to_call = @@hooks[:global][name.to_sym]
+        hooks_to_call.concat(@@hooks[namespace][name.to_sym]) if namespace != :global
         return if hooks_to_call.empty?
         hooks_to_call.each {|hook| hook.call(*args) }
       end
