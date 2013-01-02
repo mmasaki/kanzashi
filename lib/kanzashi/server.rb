@@ -47,7 +47,6 @@ module Kanzashi
 
         log.info("Server:start") { "Kanzashi started." }
         Hook.call(:started)
-        Hook.call(:detached, nil)
       end
     end
 
