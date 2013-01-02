@@ -2,6 +2,14 @@
 
 require "date"
 
+Kanzashi.plugin do
+  from :Server do
+    on :join do
+      p 1
+    end
+  end
+end
+
 class Kanzashi::Plugin::Log
   def initialize
     @directory = K.c[:directory] || "log"
@@ -59,11 +67,6 @@ class Kanzashi::Plugin::Log
   # whether or not to record
   def record?(command)
     !@command || @command.include?(command)
-  end
-end
-
-module Kanzashi::Plugin::Server
-  on :join do
   end
 end
 

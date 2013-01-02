@@ -1,4 +1,8 @@
 module Kanzashi
+  def self.plugin(&block)
+    Plugin::Base.module_eval(&block)
+  end
+
   module Plugin
     include Kanzashi
     class Error < StandardError; end
@@ -36,17 +40,24 @@ module Kanzashi
     end
 
     module Base
-      def self.included(mod)
-        mod.module_eval do
-          @@hooks = Hash.new {|hash, key| hash[key] = [] }
-        end
-      end
+      @@hooks = Hash.new {|hash, key| hash[key] = {} }
 
       module_function
 
+      def from(mod, &block)
+        Module.new do
+          extend Base
+          @namespace = mod
+          module_eval(&block)
+        end
+      end
+
       def on(name, &block)
         raise Error, "no blocks given (hook: #{name})" unless block_given?
-        @@hooks[name.to_sym].push(block)
+        hooks = @@hooks[@namespace || :global]
+        hooks[name.to_sym] ||= []
+        hooks[name.to_sym].push(block)
+        p @@hooks
       end
 
       def call_hooks(name, *args)

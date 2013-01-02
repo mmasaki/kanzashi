@@ -7,7 +7,7 @@ module Kanzashi
       module_function
 
       def call(name, *args)
-        Plugin::Server.call_hooks(name, *args)
+        Plugin::Base.call_hooks(name, *args)
         ::Kanzashi::Hook.call(name, *args)
       end
     end
