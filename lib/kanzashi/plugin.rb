@@ -1,6 +1,9 @@
 module Kanzashi
   def self.plugin(&block)
-    Plugin::Base.module_eval(&block)
+    Module.new do
+      extend Plugin::Base
+      module_eval(&block)
+    end
   end
 
   module Plugin

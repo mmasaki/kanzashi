@@ -1,3 +1,8 @@
+Kanzashi.plugin do
+  from :Server do
+  end
+end
+
 Kh.start do
   @directory = K::Config.config[:log][:directory] || "log"
   @filename = K::Config.config[:log][:filename] || "%Y.%m.%d.txt"
