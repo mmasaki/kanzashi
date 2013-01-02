@@ -40,30 +40,35 @@ module Kanzashi
     end
 
     module Base
-      @@hooks = Hash.new {|hash, key| hash[key] = {} }
+      @@hooks = Hash.new do |hash, key|
+        hash[key] = Hash.new {|hash, key| hash[key] = [] }
+      end
 
       module_function
 
+      def namespace
+        @namespace || :global
+      end
+
       def from(mod, &block)
+        mod = Kanzashi.const_get(mod) unless mod == Module
         Module.new do
           extend Base
           @namespace = mod
-          module_eval(&block)
+          module_exec(mod, &block)
         end
       end
 
       def on(name, &block)
         raise Error, "no blocks given (hook: #{name})" unless block_given?
-        hooks = @@hooks[@namespace || :global]
-        hooks[name.to_sym] ||= []
-        hooks[name.to_sym].push(block)
-        p @@hooks
+        @@hooks[namespace][name.to_sym].push(block)
       end
 
-      def call_hooks(name, *args)
-        @@hooks[name.to_sym].each do |hook|
-          hook.call(*args)
-        end
+      def call_hooks(namespace, name, *args)
+        hooks_to_call = @@hooks[namespace][name.to_sym]
+        hooks_to_call.concat(@@hooks[:global][name.to_sym]) if namespace != :global
+        return if hooks_to_call.empty?
+        hooks_to_call.each {|hook| hook.call(*args) }
       end
     end
   end

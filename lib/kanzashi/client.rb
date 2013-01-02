@@ -3,6 +3,13 @@ module Kanzashi
   module Client
     include Kanzashi
 
+    module Hook # for compatibility
+      def self.call(name, *args)
+        Plugin::Base.call_hooks(Client, name, *args)
+        ::Kanzashi::Hook.call(name, *args)
+      end
+    end
+
     class << self
       include UtilMethod
 

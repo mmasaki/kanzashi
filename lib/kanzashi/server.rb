@@ -4,10 +4,8 @@ module Kanzashi
     include Kanzashi
 
     module Hook # for compatibility
-      module_function
-
-      def call(name, *args)
-        Plugin::Base.call_hooks(name, *args)
+      def self.call(name, *args)
+        Plugin::Base.call_hooks(Server, name, *args)
         ::Kanzashi::Hook.call(name, *args)
       end
     end
