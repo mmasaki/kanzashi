@@ -28,7 +28,7 @@ class Kanzashi::Plugin::Log
     dst = dst.to_sym
     if path(dst) != @logfiles[dst].path
       @logfiles[dst].close
-      @logfiles[dst] = File.open(path(dst), "a", @mode) { |f| f.puts(str) }
+      @logfiles[dst] = File.open(path(dst), "a", @mode)
     end
   end
 
