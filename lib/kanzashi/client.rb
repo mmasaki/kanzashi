@@ -157,7 +157,7 @@ module Kanzashi
       # reply to names
       channel_pos = 2
       relay_with_cache(m, channel_pos, line)
-      channel_sym = m[channel_pos].to_s.to_sym
+      channel_sym = channel_rewrite(m[channel_pos], @server_name).to_sym
       @channels[channel_sym][:names] = m[3].to_s.split # cache names list
     end
 
