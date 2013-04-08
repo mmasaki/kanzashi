@@ -114,11 +114,7 @@ module Kanzashi
     
     # rewrite channel names for Kanzashi clients
     def message_rewrite(line)
-      begin
-        params = line.split
-      rescue ArgumentError => ex
-        log.error("Client") { ex.message }
-      end
+      params = line.split
       if channel_param = params.find {|param| /^:?(#|&)/ =~ param }
         channels = channel_param.split(",")
         channels.map! do |channel|
