@@ -106,12 +106,14 @@ Kanzashi.plugin do
       end
     end
 
+=begin
     on :quit do |m, client|
       if log.record?(:quit)
-        channel_name = Kh.channel_rewrite(m[0], client.server_name)
+        #XXX: quit message has no channel name
         log.puts("! #{m.prefix.nick} (\"#{m[1]}\")", channel_name)
       end
     end
+=end
 
     on :kick do |m, client|
       if log.record?(:kick)
@@ -156,7 +158,7 @@ Kanzashi.plugin do
       if log.record?(:nick)
         nick = m.prefix.nick
         client.channels.each do |channel, value|
-          log.puts("#{nick} -> #{m[0]}", "#{channel}@#{client.server_name}") if value[:names].include?(nick)
+          log.puts("#{nick} -> #{m[0]}", channel) if value[:names].include?(nick)
         end
       end
     end
