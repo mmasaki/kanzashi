@@ -47,14 +47,14 @@ module Kanzashi
         hash[key] = Hash.new {|hash, key| hash[key] = [] }
       end
 
-      module_function
-
       def namespace
         @namespace || :global
       end
 
+      module_function
+
       def from(mod, &block)
-        mod = Kanzashi.const_get(mod) unless mod == Module
+        mod = Kanzashi.const_get(mod) unless mod.is_a?(Module)
         Module.new do
           extend Base
           @namespace = mod
