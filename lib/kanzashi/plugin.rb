@@ -27,6 +27,10 @@ module Kanzashi
 
     def plug(x)
       list unless @@old_plugins
+      unless @@plugins.has_key?(x)
+        log.warn("Plugin") { "\"#{x}\" is not found" }
+        return false
+      end
       load @@plugins[x][:path]
     end
 
@@ -39,7 +43,11 @@ module Kanzashi
 
   module Hook
     def plugin(&block)
-      module_eval(&block)
+      begin
+        module_eval(&block)
+      rescue
+        log.error("Plugin") { ex.message }
+      end
     end
     
     def self.included(obj)
@@ -60,7 +68,13 @@ module Kanzashi
     end
   
     def call_hooks(event, *args)
-      hooks[event].each {|hook| hook.call(*args) }
+      hooks[event].each do |hook|
+        begin
+          hook.call(*args)
+        rescue => ex
+          log.error("Hook") { ex.message }
+        end
+      end
     end
   end
 end
