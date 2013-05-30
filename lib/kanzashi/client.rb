@@ -192,7 +192,7 @@ module Kanzashi
     def receive_line(line)
       m = parse_line(line)
       return unless m
-      call_hooks(m.command.downcase.to_sym, m, self)
+      call_hooks(m.command.downcase, m, self)
       case m.command
       when "PING"
         send_data "PONG #{config.user.nick}" # reply to ping

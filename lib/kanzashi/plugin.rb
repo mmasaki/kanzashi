@@ -68,6 +68,7 @@ module Kanzashi
     end
   
     def call_hooks(event, *args)
+      event = event.to_sym unless event.is_a?(Symbol)
       hooks[event].each do |hook|
         begin
           hook.call(*args)
