@@ -2,12 +2,10 @@ module Kanzashi
   # a module to communicate with IRC servers as a client
   module Client
     include Kanzashi
+    extend Kanzashi::Hook
 
-    module Hook # for compatibility
-      def self.call(name, *args)
-        Plugin::Base.call_hooks(Client, name, *args)
-        ::Kanzashi::Hook.call(name, *args)
-      end
+    def call_hooks(event, *args)
+      Client.call_hooks(event, *args)
     end
 
     class << self
@@ -191,16 +189,10 @@ module Kanzashi
       return nil
     end
 
-    def call_hooks(m)
-      command = m.command.downcase
-      Hook.call(command.to_sym, m, self)
-      Hook.call("#{command}_from_server".to_sym, m, self)
-    end
-
     def receive_line(line)
       m = parse_line(line)
       return unless m
-      call_hooks(m) 
+      call_hooks(m.command.downcase.to_sym, m, self)
       case m.command
       when "PING"
         send_data "PONG #{config.user.nick}" # reply to ping

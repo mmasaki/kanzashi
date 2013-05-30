@@ -1,11 +1,4 @@
 module Kanzashi
-  def self.plugin(&block)
-    Module.new do
-      extend Plugin::Base
-      module_eval(&block)
-    end
-  end
-
   module Plugin
     include Kanzashi
     class Error < StandardError; end
@@ -14,7 +7,10 @@ module Kanzashi
     PLUGINS_DIR = File.expand_path("#{File.dirname(__FILE__)}/../../plugins")
     @@plugins = {}
     @@old_plugins = nil
-
+    @@hooks = Hash.new do |hash, key|
+      hash[key] = Hash.new {|hash, key| hash[key] = [] }
+    end
+    
     module_function
 
     def list
@@ -31,9 +27,7 @@ module Kanzashi
 
     def plug(x)
       list unless @@old_plugins
-      Hook.make_space(x) do
-        load @@plugins[x][:path]
-      end
+      load @@plugins[x][:path]
     end
 
     def plug_all
@@ -41,39 +35,32 @@ module Kanzashi
         plug name if cfg.enabled
       end
     end
+  end
 
-    module Base
-      @@hooks = Hash.new do |hash, key|
-        hash[key] = Hash.new {|hash, key| hash[key] = [] }
-      end
-
-      def namespace
-        @namespace || :global
-      end
-
-      module_function
-
-      def from(mod, &block)
-        mod = Kanzashi.const_get(mod) unless mod.is_a?(Module)
-        Module.new do
-          extend Base
-          @namespace = mod
-          module_exec(mod, &block)
-        end
-      end
-
-      def on(name, &block)
-        raise Error, "no blocks given (hook: #{name})" unless block_given?
-        @@hooks[namespace][name.to_sym].push(block)
-      end
-
-      def call_hooks(namespace, name, *args)
-        #hooks_to_call = @@hooks[:global][name.to_sym]
-        hooks_to_call = []
-        hooks_to_call.concat(@@hooks[namespace][name.to_sym]) if namespace != :global
-        return if hooks_to_call.empty?
-        hooks_to_call.each {|hook| hook.call(*args) }
-      end
+  module Hook
+    def plugin(&block)
+      module_eval(&block)
+    end
+    
+    def self.included(obj)
+      obj.extend(self)
+    end
+    
+    def self.extended(obj)
+      hooks = Hash.new {|hash, key| hash[key] = [] }
+      obj.class_variable_set(:@@hooks, hooks)
+    end
+    
+    def hooks
+      self.class_variable_get(:@@hooks)
+    end
+  
+    def on(event, &block)
+      hooks[event].push(block)
+    end
+  
+    def call_hooks(event, *args)
+      hooks[event].each {|hook| hook.call(*args) }
     end
   end
 end

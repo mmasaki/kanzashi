@@ -2,12 +2,10 @@ module Kanzashi
   # a module behaves like an IRC server to IRC clients.
   module Server
     include Kanzashi
+    extend Kanzashi::Hook
 
-    module Hook # for compatibility
-      def self.call(name, *args)
-        Plugin::Base.call_hooks(Server, name, *args)
-        ::Kanzashi::Hook.call(name, *args)
-      end
+    def call_hooks(event, *args)
+      Server.call_hooks(event, *args)
     end
 
     class << self
@@ -27,13 +25,13 @@ module Kanzashi
       def start_and_connect
         Plugin.plug_all
 
-        Hook.call(:start)
+        call_hooks(:start)
         log.info("Server:start") { "Kanzashi starting..." }
 
         @@networks = {}
         config.networks.each do |server_name, server|
           log.info("Server:connect") { "Connecting to #{server_name}..."  }
-          Hook.call(:connect, server_name)
+          call_hooks(:connect, server_name)
           log.debug("Server:connect") { "#{server_name}: #{server}" }
 
           connection = EventMachine.connect(server.host, server.port, Client, server_name, server.encoding||"UTF-8", server.tls)
@@ -41,12 +39,12 @@ module Kanzashi
 
           connection.send_data "NICK #{config.user.nick}\r\nUSER #{config.user.user||config.user.nick} 8 * :#{config.user.real}"
 
-          Hook.call(:connected, server_name)
+          call_hooks(:connected, server_name)
           log.info("Server:connect") { "Connected to #{server_name}." }
         end
 
         log.info("Server:start") { "Kanzashi started." }
-        Hook.call(:started)
+        call_hooks(:started)
       end
     end
 
@@ -56,7 +54,7 @@ module Kanzashi
 
     def initialize
       Client.add_connection(self)
-      Hook.call(:new_connection, self)
+      call_hooks(:new_connection, self)
       @buffer = BufferedTokenizer.new(CRLF)
       @user = {}
       @@client_count += 1
@@ -93,12 +91,11 @@ module Kanzashi
       end
     end
 
-    # if detached, call Hook.detached.
     def unbind
       Client.del_connection(self)
       @@client_count -= 1
-      Hook.call(:unbind, self)
-      Hook.call(:detached, self) if @@client_count.zero?
+      call_hooks(:unbind, self)
+      call_hooks(:detached, self) if @@client_count.zero?
     end
 
     alias receive_from_server send_data
@@ -120,14 +117,14 @@ module Kanzashi
     end
 
     def bad_password
-      Hook.call(:bad_password, self)
+      call_hooks(:bad_password, self)
       send_data "ERROR :Bad password?"
       close_connection_after_writing
     end
 
     def _user(m)
-      Hook.call(:new_session, self)
-      Hook.call(:attached) if @@client_count == 1
+      call_hooks(:new_session, self)
+      call_hooks(:attached) if @@client_count == 1
 
       @user[:username] = m[0].to_s
       @user[:realname] = m[3].to_s
@@ -169,7 +166,7 @@ module Kanzashi
     end
 
     def quit
-      Hook.call(:quit, self)
+      call_hooks(:quit, self)
       send_data "ERROR :Closing Link."
       close_connection_after_writing
     end
@@ -185,17 +182,11 @@ module Kanzashi
       return nil
     end
 
-    def call_hooks(m)
-      command = m.command.downcase
-      Hook.call(command.to_sym, m, self)
-      Hook.call("#{command}_from_client".to_sym, m, self)
-    end
-
     def receive_line(line)
       m = parse_line(line)
       return unless m
       log.debug("Server:receive_line") { "Received line: #{line.chomp.inspect}" }
-      Hook.call(:receive_line, m,line.chomp)
+      call_hooks(:receive_line, m,line.chomp)
       bad_password if !@auth && m.command != "PASS"
       case m.command
       when "PASS"
@@ -216,7 +207,7 @@ module Kanzashi
       else
         send_server(line)
       end
-      call_hooks(m)
+      call_hooks(m.command.downcase, m, self)
     end
 
     # find channel param pos

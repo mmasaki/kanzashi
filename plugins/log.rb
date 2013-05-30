@@ -64,117 +64,115 @@ end
 
 log = Kanzashi::Plugin::Log.new
 
-Kanzashi.plugin do
-  from :Server do
-    on :start do
-      log = Kanzashi::Plugin::Log.new
-    end
+Kanzashi::Server.plugin do
+  on :start do
+    log = Kanzashi::Plugin::Log.new
+  end
 
-    on :join do |m|
-      m[0].to_s.split(",").each {|c| log.add_dst(c) }if log.keep_file_open
-    end
+  on :join do |m|
+    m[0].to_s.split(",").each {|c| log.add_dst(c) }if log.keep_file_open
+  end
 
-    on :privmsg do |m, server|
-      if log.record?(:privmsg) && !m.ctcp?
-        log.puts(">#{m[0]}:#{server.user[:nick]}< #{m[1]}", m[0])
-      end
+  on :privmsg do |m, server|
+    if log.record?(:privmsg) && !m.ctcp?
+      log.puts(">#{m[0]}:#{server.user[:nick]}< #{m[1]}", m[0])
     end
+  end
 
-    on :notice do |m, server|
-      if log.record?(:notice) && !m.ctcp?
-        channel_name = m[0].to_s
-        log.puts(")#{channel_name}:#{server.user[:nick]}( #{m[1]}", channel_name)
+  on :notice do |m, server|
+    if log.record?(:notice) && !m.ctcp?
+      channel_name = m[0].to_s
+      log.puts(")#{channel_name}:#{server.user[:nick]}( #{m[1]}", channel_name)
+    end
+  end
+end
+
+Kanzashi::Client.plugin do
+  on :join do |m, client|
+    nick = m.prefix.nick
+    channel_name = Kh.channel_rewrite(m[0], client.server_name)
+    if nick == client.nick # Kanzashi's join
+      log.add_dst(channel_name) if log.keep_file_open
+    elsif log.record?(:join) # others join
+      log.puts("+ #{nick} (#{m.prefix}) to #{channel_name}", channel_name)
+    end
+  end
+
+  on :part do |m, client|
+    if log.record?(:part)
+      channel_name = Kh.channel_rewrite(m[0], client.server_name)
+      log.puts("- #{m.prefix.nick} (\"#{m[1]}\")", channel_name)
+    end
+  end
+
+=begin
+  on :quit do |m, client|
+    if log.record?(:quit)
+      #XXX: quit message has no channel name
+      log.puts("! #{m.prefix.nick} (\"#{m[1]}\")", channel_name)
+    end
+  end
+=end
+
+  on :kick do |m, client|
+    if log.record?(:kick)
+      channel_name = Kh.channel_rewrite(m[0], client.server_name)
+      log.puts("- #{m[1]} by #{m.prefix.nick} from #{channel_name} (#{m[2]})", channel_name)
+    end
+  end
+
+  on :mode do |m, client|
+    if log.record?(:mode) && /^(#|&).+$/ =~ m[0] # to avoid usermode MODE messages
+      channel_name = Kh.channel_rewrite(m[0], client.server_name)
+      log.puts("Mode by #{m.prefix.nick}: #{m[0]} #{m[1]} #{m[2]}", channel_name)
+    end
+  end
+
+  on :privmsg do |m, client|
+    if log.record?(:privmsg) && !m.ctcp?
+      channel_name = Kh.channel_rewrite(m[0], client.server_name)
+      if log.distinguish_myself
+        log.puts(">#{m[0]}:#{m.prefix.nick}< #{m[1]}", channel_name)
+      else
+        log.puts("<#{m[0]}:#{m.prefix.nick}> #{m[1]}", channel_name)
       end
     end
   end
 
-  from :Client do
-    on :join do |m, client|
-      nick = m.prefix.nick
-      channel_name = Kh.channel_rewrite(m[0], client.server_name)
-      if nick == client.nick # Kanzashi's join
-        log.add_dst(channel_name) if log.keep_file_open
-      elsif log.record?(:join) # others join
-        log.puts("+ #{nick} (#{m.prefix}) to #{channel_name}", channel_name)
-      end
-    end
-
-    on :part do |m, client|
-      if log.record?(:part)
-        channel_name = Kh.channel_rewrite(m[0], client.server_name)
-        log.puts("- #{m.prefix.nick} (\"#{m[1]}\")", channel_name)
-      end
-    end
-
-=begin
-    on :quit do |m, client|
-      if log.record?(:quit)
-        #XXX: quit message has no channel name
-        log.puts("! #{m.prefix.nick} (\"#{m[1]}\")", channel_name)
-      end
-    end
-=end
-
-    on :kick do |m, client|
-      if log.record?(:kick)
-        channel_name = Kh.channel_rewrite(m[0], client.server_name)
-        log.puts("- #{m[1]} by #{m.prefix.nick} from #{channel_name} (#{m[2]})", channel_name)
-      end
-    end
-
-    on :mode do |m, client|
-      if log.record?(:mode) && /^(#|&).+$/ =~ m[0] # to avoid usermode MODE messages
-        channel_name = Kh.channel_rewrite(m[0], client.server_name)
-        log.puts("Mode by #{m.prefix.nick}: #{m[0]} #{m[1]} #{m[2]}", channel_name)
-      end
-    end
-
-    on :privmsg do |m, client|
-      if log.record?(:privmsg) && !m.ctcp?
-        channel_name = Kh.channel_rewrite(m[0], client.server_name)
+  on :notice do |m, client|
+    if log.record?(:notice) && !m.ctcp?
+      channel_name = m[0].to_s
+      if channel_name != "*" && channel_name != client.nick
+        channel_name = Kh.channel_rewrite(channel_name, client.server_name)
         if log.distinguish_myself
-          log.puts(">#{m[0]}:#{m.prefix.nick}< #{m[1]}", channel_name)
+          log.puts(")#{channel_name}:#{m.prefix.nick}(#{m[1]}", channel_name)
         else
-          log.puts("<#{m[0]}:#{m.prefix.nick}> #{m[1]}", channel_name)
+          log.puts("(#{channel_name}:#{m.prefix.nick})#{m[1]}", channel_name)
         end
       end
     end
+  end
 
-    on :notice do |m, client|
-      if log.record?(:notice) && !m.ctcp?
-        channel_name = m[0].to_s
-        if channel_name != "*" && channel_name != client.nick
-          channel_name = Kh.channel_rewrite(channel_name, client.server_name)
-          if log.distinguish_myself
-            log.puts(")#{channel_name}:#{m.prefix.nick}(#{m[1]}", channel_name)
-          else
-            log.puts("(#{channel_name}:#{m.prefix.nick})#{m[1]}", channel_name)
-          end
-        end
+  on :nick do |m, client|
+    if log.record?(:nick)
+      nick = m.prefix.nick
+      client.channels.each do |channel, value|
+        log.puts("#{nick} -> #{m[0]}", channel) if value[:names].include?(nick)
       end
     end
+  end
 
-    on :nick do |m, client|
-      if log.record?(:nick)
-        nick = m.prefix.nick
-        client.channels.each do |channel, value|
-          log.puts("#{nick} -> #{m[0]}", channel) if value[:names].include?(nick)
-        end
-      end
+  on :invite do |m, client|
+    if log.record?(:invite)
+      channel_name = Kh.channel_rewrite(m[1], client.server_name)
+      log.puts("Invited by #{m[0]}: #{channel_name}", channel_name) 
     end
+  end
 
-    on :invite do |m, client|
-      if log.record?(:invite)
-        channel_name = Kh.channel_rewrite(m[1], client.server_name)
-        log.puts("Invited by #{m[0]}: #{channel_name}", channel_name) 
-      end
-    end
-
-    on :topic do |m, client|
-      if log.record?(:topic)
-        channel_name = Kh.channel_rewrite(m[0], client.server_name)
-        log.puts("Topic of channel #{channel_name} by #{m.prefix.nick}: #{m[1]}", channel_name)
-      end
+  on :topic do |m, client|
+    if log.record?(:topic)
+      channel_name = Kh.channel_rewrite(m[0], client.server_name)
+      log.puts("Topic of channel #{channel_name} by #{m.prefix.nick}: #{m[1]}", channel_name)
     end
   end
 end
