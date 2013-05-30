@@ -147,7 +147,7 @@ module Kanzashi
         join(channel)
         sleep 0.2 # to avoid excess flood
       end
-      Kh.call(:client_welcome, self)
+      call_hooks(:client_welcome, self)
     end
 
     # 353: RPL_NAMREPLY
