@@ -1,7 +1,11 @@
-Kh.detached do
-  K::Server.send_to_all("AWAY :#{K.c.message}\r\n")
-end
+message = K.c.message
 
-Kh.attached do
-  K::Server.send_to_all("AWAY\r\n")
+Kanzashi::Server.plugin do |server_module|
+  on :attached do
+    server_module.send_to_all("AWAY")
+  end
+
+  on :detached do
+    server_module.send_to_all("AWAY :#{message}")
+  end
 end

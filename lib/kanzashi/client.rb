@@ -2,6 +2,11 @@ module Kanzashi
   # a module to communicate with IRC servers as a client
   module Client
     include Kanzashi
+    extend Kanzashi::Hook
+
+    def call_hooks(event, *args)
+      Client.call_hooks(event, *args)
+    end
 
     class << self
       include UtilMethod
@@ -107,11 +112,7 @@ module Kanzashi
     
     # rewrite channel names for Kanzashi clients
     def message_rewrite(line)
-      begin
-        params = line.split
-      rescue ArgumentError => ex
-        log.error("Client") { ex.message }
-      end
+      params = line.split
       if channel_param = params.find {|param| /^:?(#|&)/ =~ param }
         channels = channel_param.split(",")
         channels.map! do |channel|
@@ -154,7 +155,7 @@ module Kanzashi
       # reply to names
       channel_pos = 2
       relay_with_cache(m, channel_pos, line)
-      channel_sym = m[channel_pos].to_s.to_sym
+      channel_sym = channel_rewrite(m[channel_pos], @server_name).to_sym
       @channels[channel_sym][:names] = m[3].to_s.split # cache names list
     end
 
@@ -188,16 +189,10 @@ module Kanzashi
       return nil
     end
 
-    def call_hooks(m)
-      command = m.command.downcase
-      Hook.call(command.to_sym, m, self)
-      Hook.call("#{command}_from_server".to_sym, m, self)
-    end
-
     def receive_line(line)
       m = parse_line(line)
       return unless m
-      call_hooks(m) 
+      call_hooks(m.command.downcase.to_sym, m, self)
       case m.command
       when "PING"
         send_data "PONG #{config.user.nick}" # reply to ping
