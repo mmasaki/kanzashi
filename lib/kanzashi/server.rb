@@ -56,6 +56,8 @@ module Kanzashi
       Client.add_connection(self)
       call_hooks(:new_connection, self)
       @buffer = BufferedTokenizer.new(CRLF)
+      @auth_required = !!config.server.pass
+      @authorized = false
       @user = {}
       @@client_count += 1
     end
@@ -102,16 +104,15 @@ module Kanzashi
 
     private
 
-    def pass(m)
+    def authenticate(pass)
       if config.server.pass
-        pass = m[0].to_s
         hexdigest = Digest::SHA256.hexdigest(pass)
         case config.server.pass
         when hexdigest, pass
-          @auth = true
+          @authorized = true
+        else
+          bad_password
         end
-      else # the case where the user has not specified password
-        @auth = true
       end
       nil
     end
@@ -187,10 +188,11 @@ module Kanzashi
       return unless m
       log.debug("Server:receive_line") { "Received line: #{line.chomp.inspect}" }
       call_hooks(:receive_line, m,line.chomp)
-      bad_password if !@auth && m.command != "PASS"
+      bad_password if @auth_required && !@authorized && m.command != "PASS"
       case m.command
       when "PASS"
-        pass(m)
+        pass = m[0]
+        authenticate(pass)
       when "NICK"
         @@networks.each_value {|n| n.nick = m[0].to_s } if @user[:nick]
         @user[:nick] = m[0].to_s
