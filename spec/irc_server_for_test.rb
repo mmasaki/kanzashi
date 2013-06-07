@@ -195,8 +195,6 @@ class TestIRCd < Net::IRC::Server::Session
   end
 
   def on_privmsg(m)
-    Kh.call(:server_privmsg, m)
-
     while (Time.now.to_i - @updated_on < 2)
       sleep 2
     end
@@ -297,13 +295,11 @@ class TestIRCd < Net::IRC::Server::Session
   # Call when client connected.
   # Send RPL_WELCOME sequence. If you want to customize, override this method at subclass.
   def initial_message
-    Kh.call(:server_connect)
     post @socket, server_name, RPL_WELCOME,  @nick, "Welcome to the Internet Relay Network #{@prefix}"
     post @socket, server_name, RPL_YOURHOST, @nick, "Your host is #{server_name}, running version #{server_version}"
     post @socket, server_name, RPL_CREATED,  @nick, "This server was created #{Time.now}"
     post @socket, server_name, RPL_MYINFO,   @nick, "#{server_name} #{server_version} #{available_user_modes} #{available_channel_modes}"
   end
-
 end
 
 

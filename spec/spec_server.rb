@@ -7,7 +7,7 @@ class MocKanzashi
   attr_reader :datas
 
   def close_connection(a=false)
-    Kanzashi::Hook.call(:mock_close, a)
+    call_hooks(:mock_close, a)
   end
 
   def send_data(data)
@@ -20,7 +20,7 @@ class MocKanzashi
   end
 
   def close_connection_after_writing
-    Kanzashi::Hook.call(:mock_close, true)
+    call_hooks(:mock_close, true)
   end
 end
 
@@ -39,17 +39,16 @@ describe Kanzashi::Server do
     EOY
     a = false
     b = false
-    c = false
-    Kh.started { a = true }
-    Kh.server_connect { b = true }
-    Kh.client_welcome { c = true }
+    Kanzashi::Server.plugin do
+      on(:started) { a = true }
+      on(:connect) { b = true }
+    end
     th = Thread.new { EM.run { Kanzashi::Server.start_and_connect } }
-    nil until a && b && c
+    nil until a && b
   end
 
   th = nil
   before do
-    Kanzashi::Hook.remove_space :spec_server
     Kanzashi::Config.reset
 
     Kanzashi::Config.load_config <<-EOY
@@ -66,6 +65,19 @@ describe Kanzashi::Server do
     #th ||= Thread.new { Kanzashi::Server.start_and_connect }
     @server = MocKanzashi.new
   end
+  
+  it "says error when specified wrong password" do
+    Kanzashi::Config.load_config <<-EOY
+server:
+  pass: hi
+    EOY
+    a = false
+    Kanzashi::Server.plugin do
+      on(:bad_password) { a = true }
+    end
+    @server.line "PASS hola"
+    a.should be_true
+  end
 
   it "requires password when password specified in config" do
     Kanzashi::Config.load_config <<-EOY
@@ -76,20 +88,6 @@ server:
     @server.line "NICK kanzashi"
     @server.line "USER kanzashi kanzashi kanzashi"
     @server.datas.join.should match(/^:localhost 001/)
-  end
-
-  it "says error when specified wrong password" do
-    Kanzashi::Config.load_config <<-EOY
-server:
-  pass: hi
-    EOY
-    a = false
-    Kh.make_space(:spec_server) do
-      Kh.mock_close { a = true }
-    end
-    @server.line "PASS hola"
-    @server.datas[-1].should match(/^ERROR/)
-    a.should be_true
   end
 
   it "password also accepts in SHA256 sum" do
@@ -116,8 +114,8 @@ server:
 
   it "pass messages to network" do
     a = nil
-    Kh.make_space(:spec_server) do
-      Kh.server_privmsg {|m| a = m}
+    Kanzashi::Server.plugin do
+      on(:privmsg) {|m| a = m }
     end
     @server.line "NICK kanzashi"
     @server.line "USER kanzashi kanzashi kanzashi"
@@ -127,28 +125,6 @@ server:
       nil until a
     }
     a[1].should == "hi"
-  end
-
-  it "network-separator is configruable" do
-    a = nil
-    Kh.make_space(:spec_server) do
-      Kh.server_privmsg {|m| a = m}
-    end
-    Kanzashi::Config.load_config <<-EOY
-separator: "-"
-    EOY
-    @server.line "NICK kanzashi"
-    @server.line "USER kanzashi kanzashi kanzashi"
-    @server.line "JOIN #hi-local"
-    @server.line "PRIVMSG #hi-local :hola"
-    timeout(3) {
-      nil until a
-    }
-    a[0].should == "#hi"
-    a[1].should == "hola"
-    Kanzashi::Config.load_config <<-EOY
-separator: "@"
-    EOY
   end
 
   it "sends JOIN command when connected to networks" do # TODO: spec_client.rb
@@ -179,6 +155,4 @@ server:
     @server.line "USER kanzashi kanzashi kanzashi"
     @server.datas.join.should match(/^:localhost 001 kanzashi :Welcome to the Internet Relay Network kanzashi!kanzashi@localhost/)
   end
-
-
 end
