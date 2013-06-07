@@ -91,7 +91,7 @@ module Kanzashi
     private
 
     def relay(data)
-      @@relay_to.each { |r| r.receive_from_server(data) }
+      @@relay_to.each {|r| r.receive_from_server(data) }
     end
 
     def message_nick(m)
