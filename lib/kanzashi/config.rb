@@ -35,15 +35,15 @@ module Kanzashi
 
       def load_config(str=nil)
         @@old_config = Util::CustomHash.new(@@config)
-        file = str || open(@@config[:config_file])
-        yaml = Util::CustomHash.new(YAML.load(file)||{})
-        yaml.delete :config_file
+        yaml = str || open(@@config[:config_file])
+        config = Util::CustomHash.new(YAML.load(yaml)||{})
+        config.delete :config_file
         [:user,:server].each do |k|
-          if (_ = yaml.delete(k))
+          if (_ = config.delete(k))
             @@config[k].merge! _
           end
         end
-        if (_ = yaml.delete(:networks))
+        if (_ = config.delete(:networks))
           _.each do |k,v|
             if @@config.networks[k]
               @@config.networks[k].merge! v
@@ -57,7 +57,7 @@ module Kanzashi
             end
           end
         end
-        @@config.merge! yaml
+        @@config.merge! config
         @@config = Util::CustomHash.new(@@config)
       end
 

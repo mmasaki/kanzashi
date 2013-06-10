@@ -1,158 +1,151 @@
 require 'timeout'
 require_relative './helper'
 
-class MocKanzashi
-  include Kanzashi::Server
+trap(:INT) { exit }
 
-  attr_reader :datas
-
-  def close_connection(a=false)
-    call_hooks(:mock_close, a)
-  end
-
-  def send_data(data)
-    @datas ||= []
-    @datas << data
-  end
-
-  def line(l)
-    receive_line(l+"\r\n")
-  end
-
-  def close_connection_after_writing
-    call_hooks(:mock_close, true)
-  end
-end
+CRLF = "\r\n"
 
 describe Kanzashi::Server do
   before :all do
+    @test_port = 1234
+    @test_password = "hi"
+    @start     = false
+    @connected = false
     TestIRCd.wait
     Kanzashi::Config.load_config <<-EOY
-    networks:
-      local:
-        host: localhost
-        port: #{TestIRCd.port}
-        encoding: UTF-8
-        join_to:
-          - hola
-          - "#tere"
+server:
+  bind: 127.0.0.1
+  port: #{@test_port}
+  pass: #{Digest::SHA256.hexdigest(@test_password)}
+networks:
+  local:
+    host: localhost
+    port: #{TestIRCd.port}
+    encoding: UTF-8
+    join_to:
+      - hola
+      - "#tere"
     EOY
-    a = false
-    b = false
     Kanzashi::Server.plugin do
-      on(:started) { a = true }
-      on(:connect) { b = true }
+      on(:start)   { @start     = true }
+      on(:connect) { @connected = true }
     end
-    th = Thread.new { EM.run { Kanzashi::Server.start_and_connect } }
-    nil until a && b
-  end
-
-  th = nil
-  before do
-    Kanzashi::Config.reset
-
-    Kanzashi::Config.load_config <<-EOY
-    networks:
-      local:
-        host: localhost
-        port: #{TestIRCd.port}
-        encoding: UTF-8
-        join_to:
-          - hola
-          - "#tere"
-    EOY
-
-    #th ||= Thread.new { Kanzashi::Server.start_and_connect }
-    @server = MocKanzashi.new
+    th = Thread.new do
+      EventMachine.run do
+        Kanzashi::Server.start_and_connect
+        EventMachine.start_server Kanzashi.config.server.bind, Kanzashi.config.server.port, Kanzashi::Server
+      end
+    end
+    nil until th.stop?
+    sleep 1
   end
   
-  it "says error when specified wrong password" do
-    Kanzashi::Config.load_config <<-EOY
-server:
-  pass: hi
-    EOY
-    a = false
-    Kanzashi::Server.plugin do
-      on(:bad_password) { a = true }
+  before do
+    begin
+      @socket = TCPSocket.new("localhost", @test_port)
+    rescue Errno::ECONNREFUSED => ex
+      sleep 1
+      retry
     end
-    @server.line "PASS hola"
-    a.should be_true
   end
 
-  it "requires password when password specified in config" do
-    Kanzashi::Config.load_config <<-EOY
-server:
-  pass: hi
-    EOY
-    @server.line "PASS hi"
-    @server.line "NICK kanzashi"
-    @server.line "USER kanzashi kanzashi kanzashi"
-    @server.datas.join.should match(/^:localhost 001/)
+  def send(str)
+    str += CRLF unless str.end_with?(CRLF)
+    @socket.write(str)
+  end
+  
+  def recv
+    line = @socket.gets
+    line.chomp! if line
+    line
   end
 
-  it "password also accepts in SHA256 sum" do
-    Kanzashi::Config.load_config <<-EOY
-server:
-  pass: 8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4
-    EOY
-    @server.line "PASS hi"
-    @server.line "NICK kanzashi"
-    @server.line "USER kanzashi kanzashi kanzashi"
-    @server.datas.join.should match(/^:localhost 001/)
-  end
-
-  it "doesn't require password when password is not specified in config" do
-    Kanzashi::Config.load_config <<-EOY
+  context "password not specified" do
+    before(:all) do
+      Kanzashi::Config.load_config <<-EOY
 server:
   pass: false
-    EOY
+      EOY
+    end
 
-    @server.line "NICK kanzashi"
-    @server.line "USER kanzashi kanzashi kanzashi"
-    @server.datas.join.should match(/^:localhost 001/)
+    it "doesn't require a password" do
+      send "NICK kanzashi"
+      send "USER kanzashi kanzashi kanzashi"
+      recv.should == ":localhost 001 kanzashi :Welcome to the Internet Relay Network kanzashi!kanzashi@localhost"
+    end
+
+    after(:all) do
+      Kanzashi::Config.load_config <<-EOY
+server:
+  pass: #{Digest::SHA256.hexdigest(@test_password)}
+      EOY
+    end 
+  end
+
+  context "password specified" do
+    it "should be logged in with raw password" do
+      send "PASS #{@test_password}"
+      send "NICK kanzashi"
+      send "USER kanzashi kanzashi kanzashi"
+      recv.should == ":localhost 001 kanzashi :Welcome to the Internet Relay Network kanzashi!kanzashi@localhost"
+    end
+    
+    it "should be logged in with sha256 digest" do
+      send "PASS #{Digest::SHA256.hexdigest(@test_password)}"
+      send "NICK kanzashi"
+      send "USER kanzashi kanzashi kanzashi"
+      recv.should == ":localhost 001 kanzashi :Welcome to the Internet Relay Network kanzashi!kanzashi@localhost"
+    end
+  end
+
+  context "when specified wrong password" do
+    before(:all) do
+      $bad_password = false
+      Kanzashi::Server.plugin do
+        on(:bad_password) { $bad_password = true }
+      end
+    end
+
+    before { send "PASS bad_password" }
+
+    it "says error" do
+      recv.should == "ERROR :Bad password?"
+    end
+  
+    it "calls :bad_password hooks" do
+      $bad_password.should be_true
+    end
   end
 
   it "pass messages to network" do
-    a = nil
+    $privmsg = nil
     Kanzashi::Server.plugin do
-      on(:privmsg) {|m| a = m }
+      on(:privmsg) {|m| $privmsg = m }
     end
-    @server.line "NICK kanzashi"
-    @server.line "USER kanzashi kanzashi kanzashi"
-    @server.line "JOIN #hi@local"
-    @server.line "PRIVMSG #hi@local :hi"
-    timeout(3) {
-      nil until a
-    }
-    a[1].should == "hi"
-  end
-
-  it "sends JOIN command when connected to networks" do # TODO: spec_client.rb
-    TestIRCd.class_variable_get(:"@@channels").has_key?("#hola").should be_true
-    TestIRCd.class_variable_get(:"@@channels").has_key?("#tere").should be_true
+    send "PASS #{@test_password}"
+    send "NICK kanzashi"
+    send "USER kanzashi kanzashi kanzashi"
+    send "JOIN #hi@local"
+    send "PRIVMSG #hi@local :hi"
+    timeout(3) do
+      nil until $privmsg
+    end
+    $privmsg[1].should == "hi"
   end
 
   it "sends JOIN command to client when connected to kanzashi" do
-    @server.line "NICK kanzashi"
-    @server.line "USER kanzashi kanzashi kanzashi"
-    @server.datas.join.should match(/#hola@local/)
-    @server.datas.join.should match(/#tere@local/)
+    send "PASS #{@test_password}"
+    send "NICK kanzashi"
+    send "USER kanzashi kanzashi kanzashi"
+    recv # drop welcome message
+    recv.should == ":kanzashi!kanzashi@localhost JOIN #hi@local"
   end
-
+  
   it "sends NICK commend when client specified nick is not equal to nick in config" do
-    @server.line "NICK kanzashii"
-    @server.line "USER kanzashi kanzashi kanzashi"
-    @server.datas.join.should match(/^:kanzashii!kanzashi@localhost NICK kanzashi/)
-  end
-
-  it "sends RPL_WELCOME with prefix" do
-    Kanzashi::Config.load_config <<-EOY
-server:
-  pass: hi
-    EOY
-    @server.line "PASS hi"
-    @server.line "NICK kanzashi"
-    @server.line "USER kanzashi kanzashi kanzashi"
-    @server.datas.join.should match(/^:localhost 001 kanzashi :Welcome to the Internet Relay Network kanzashi!kanzashi@localhost/)
+    send "PASS #{@test_password}"
+    send "NICK not_equal_to_nick_in_config"
+    send "USER kanzashi kanzashi kanzashi"
+    recv
+    recv.should == ":not_equal_to_nick_in_config!kanzashi@localhost NICK kanzashi"
   end
 end
