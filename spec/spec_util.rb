@@ -47,28 +47,4 @@ describe Kanzashi::Util do
       end
     end
   end
-
-  describe Kanzashi::UtilMethod do
-    describe ".parse_prefix" do
-      it "return nick, user, host" do
-        Kanzashi::UtilMethod.parse_prefix("nick!user@host").should == ["nick", "user", "host"]
-      end
-    end
-  end
-
-  describe Kanzashi do
-    describe ".c" do
-      it "returns configration of plugin" do
-        Kanzashi::Config.load_config <<-EOF
-plugins:
-  haruharu:
-    enabled: false
-    hi: hola
-        EOF
-        Kh.make_space(:haruharu) do
-          K.c.hi.should == "hola"
-        end
-      end
-    end
-  end
 end
