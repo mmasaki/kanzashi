@@ -13,7 +13,7 @@ module Kanzashi
     def list
       @@old_plugins = @@plugins.dup
       Dir[PLUGINS_DIR+"/*.rb"].each do |x|
-        sym = x.match(/#{Regexp.escape(PLUGINS_DIR)}\/(.+)\.rb$/)[1].to_sym
+        sym = File.basename(x, ".rb").to_sym
         @@plugins[sym] = {
           checksum: Digest::SHA256.hexdigest(File.read(x)),
           path: x
