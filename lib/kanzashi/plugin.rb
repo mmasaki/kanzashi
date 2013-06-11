@@ -7,9 +7,6 @@ module Kanzashi
     PLUGINS_DIR = File.expand_path("#{File.dirname(__FILE__)}/../../plugins")
     @@plugins = {}
     @@old_plugins = nil
-    @@hooks = Hash.new do |hash, key|
-      hash[key] = Hash.new {|hash, key| hash[key] = [] }
-    end
     
     module_function
 
